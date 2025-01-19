@@ -1,0 +1,136 @@
+pragma language_version >= 0.13.0;
+
+module GameCommons {
+  import CompactStandardLibrary;
+
+  export enum GAME_STATE { waiting_p1, waiting_p2, p1_turn, p2_turn, p1_wins, p2_wins }
+  export enum SHOT_RESULT { miss, ship_hit, ship_sunk }
+  export enum SHIP { s11, s12, s13, s14, s21, s22, s23, s31, s32, s41, s51, unknown }
+
+  export struct ShipDef {
+    ship: SHIP;
+    ship_cell: Coord;
+    ship_v: Boolean;
+  }
+
+  export struct ShotResult {
+    cell: Coord;
+    result: SHOT_RESULT;
+    player: Bytes<32>;
+    ship_def: ShipDef;
+  }
+
+  export struct Coord {
+    x: Uint<4>;
+    y: Uint<4>;
+  }
+
+  export pure circuit unknown_ship_def(): ShipDef {
+    return ShipDef {
+      ship: SHIP.unknown,
+      ship_cell: Coord { 0, 0 },
+      ship_v: false
+    };
+  }
+
+  export pure circuit contains<#S, T>(vector: Vector<S, T>, value: T): Boolean {
+    return fold((acc, item) => (acc || item == value), false, vector);
+  }
+
+  export pure circuit for_all_equals<#S, T>(vector: Vector<S, T>, value: T): Boolean {
+    return fold((acc, item) => (acc && item == value), true, vector);
+  }
+
+  export pure circuit update_hit_cell(ship_state: Coord, shot_attempt: Coord): Coord {
+    if (shot_attempt == ship_state) {
+      return Coord { 0, 0 };
+    } else {
+      return ship_state;
+    }
+  }
+
+  export pure circuit update_hit_cell_state<#S>(vector: Vector<S, Coord>, shot_attempt: Coord): Vector<S, Coord> {
+    return map((coord: Coord) => {
+      return update_hit_cell(coord, shot_attempt);
+   }, vector);
+  }
+
+  export pure circuit get_shot_result<#S>(
+    shot_attempt: Coord,
+    updated_ship_state_vector: Vector<S, Coord>,
+    player: Bytes<32>,
+    ship_def: ShipDef
+  ): ShotResult {
+    if (for_all_equals<S, Coord>(updated_ship_state_vector, Coord { 0, 0 })) {
+      return ship_sunk(shot_attempt, player, ship_def);
+    } else {
+      return ship_hit(shot_attempt, player);
+    }
+  }
+
+  export pure circuit ship_sunk(shot_attempt: Coord, player: Bytes<32>, ship_def: ShipDef): ShotResult {
+    return ShotResult {
+      cell: shot_attempt, result: SHOT_RESULT.ship_sunk, player: player, ship_def: ship_def
+    };
+  }
+
+
+  export pure circuit ship_hit(shot_attempt: Coord, player: Bytes<32>): ShotResult {
+    const empty_coord: Coord = Coord { 0, 0 };
+    return ShotResult {
+      cell: shot_attempt, result: SHOT_RESULT.ship_hit, player: player, ship_def: unknown_ship_def()
+    };
+  }
+
+  export pure circuit public_key(sk: Bytes<32>): Bytes<32> {
+    return persistent_hash<Vector<2, Bytes<32>>>([pad(32, "battleship:pk:"), sk]);
+  }
+
+  export pure circuit assert_valid_coordinate(cell: Coord): Void {
+    assert cell.x != 0 "Ship is out of the board";
+    assert cell.x < 11 "Ship is out of the board";
+    assert cell.y != 0 "Ship is out of the board";
+    assert cell.y < 11 "Ship is out of the board";
+  }
+
+  export pure circuit ship2_cells(cell: Coord, vertical: Boolean): Vector<2, Coord> {
+    if (vertical) {
+      assert cell.y < 10 "Ship must fit on the board";
+      return [cell, Coord { x: cell.x, y: (cell.y + 1) as Uint<4> }];
+    } else {
+      assert cell.x < 10 "Ship must fit on the board";
+      return [cell, Coord { x: (cell.x + 1) as Uint<4>, y: cell.y }];
+    }
+  }
+
+  export pure circuit ship3_cells(cell: Coord, vertical: Boolean): Vector<3, Coord> {
+    if (vertical) {
+      assert cell.y < 9 "Ship must fit on the board";
+      return [cell, Coord { x: cell.x, y: (cell.y + 1) as Uint<4> }, Coord { x: cell.x, y: (cell.y + 2) as Uint<4> }];
+    } else {
+      assert cell.x < 9 "Ship must fit on the board";
+      return [cell, Coord { x: (cell.x + 1) as Uint<4>, y: cell.y }, Coord { x: (cell.x + 2) as Uint<4>, y: cell.y }];
+    }
+  }
+
+  export pure circuit ship4_cells(cell: Coord, vertical: Boolean): Vector<4, Coord> {
+    if (vertical) {
+      assert cell.y < 8 "Ship must fit on the board";
+      return [cell, Coord { x: cell.x, y: (cell.y + 1) as Uint<4> }, Coord { x: cell.x, y: (cell.y + 2) as Uint<4> }, Coord { x: cell.x, y: (cell.y + 3) as Uint<4> }];
+    } else {
+      assert cell.x < 8 "Ship must fit on the board";
+      return [cell, Coord { x: (cell.x + 1) as Uint<4>, y: cell.y }, Coord { x: (cell.x + 2) as Uint<4>, y: cell.y }, Coord { x: (cell.x + 3) as Uint<4>, y: cell.y }];
+    }
+  }
+
+  export pure circuit ship5_cells(cell: Coord, vertical: Boolean): Vector<5, Coord> {
+    if (vertical) {
+      assert cell.y < 7 "Ship must fit on the board";
+      return [cell, Coord { x: cell.x, y: (cell.y + 1) as Uint<4> }, Coord { x: cell.x, y: (cell.y + 2) as Uint<4> }, Coord { x: cell.x, y: (cell.y + 3) as Uint<4> }, Coord { x: cell.x, y: (cell.y + 4) as Uint<4> }];
+    } else {
+      assert cell.x < 7 "Ship must fit on the board";
+      return [cell, Coord { x: (cell.x + 1) as Uint<4>, y: cell.y }, Coord { x: (cell.x + 2) as Uint<4>, y: cell.y }, Coord { x: (cell.x + 3) as Uint<4>, y: cell.y }, Coord { x: (cell.x + 4) as Uint<4>, y: cell.y }];
+    }
+  }
+
+}

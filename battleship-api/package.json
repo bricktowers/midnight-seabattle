@@ -1,0 +1,33 @@
+{
+  "name": "@bricktowers/battleship-api",
+  "version": "0.1.0",
+  "author": "Brick Towers",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "module": "./dist/index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "prepare-local-env": "RUN_STANDALONE='true' NODE_OPTIONS=--experimental-vm-modules jest -t 'prepare local env' --detectOpenHandles --forceExit",
+    "test": "yarn test-api",
+    "test-api": "DEBUG='testcontainers' NODE_OPTIONS=--experimental-vm-modules jest  --detectOpenHandles --forceExit",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@bricktowers/battleship-west-contract": "workspace:*",
+    "@bricktowers/token-contract": "workspace:*",
+    "pino": "^8.16.1",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.9",
+    "allure-commandline": "^2.28.0",
+    "allure-jest": "^2.15.1",
+    "allure-js-commons": "^2.15.1",
+    "eslint": "^8.52.0",
+    "jest": "^29.7.0",
+    "typescript": "^5.2.2"
+  }
+}

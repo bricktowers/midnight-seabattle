@@ -1,0 +1,572 @@
+pragma language_version >= 0.13.0;
+
+import CompactStandardLibrary;
+import "../../battleship-contract-commons/GameCommons";
+
+export { Maybe }
+export { GAME_STATE }
+export { SHOT_RESULT }
+export { ShotResult }
+export { Coord }
+export { SHIP }
+export { ShipDef }
+export { public_key }
+
+export ledger game_state: Cell<GAME_STATE>;
+export ledger shot_attempt: Cell<Coord>; // coordinate of the opponent's shot
+export ledger last_shot_result: Cell<Maybe<ShotResult>>; // validated shot result
+
+export ledger p1: Cell<Maybe<Bytes<32>>>; // hash of player 1 secret
+export ledger p1_ship_positions_hash: Cell<Bytes<32>>;
+export ledger p1_ship_state_hash: Cell<Bytes<32>>;
+export ledger p1_hit_counter: Counter;
+
+export ledger p2: Cell<Maybe<Bytes<32>>>; // hash of player 12secret
+export ledger p2_ship_positions_hash: Cell<Bytes<32>>;
+export ledger p2_ship_state_hash: Cell<Bytes<32>>;
+export ledger p2_hit_counter: Counter;
+
+witness local_secret_key(): Bytes<32>;
+witness player_ship_positions(): Ships; // ships placement
+witness player_ship_state(): ShipState; // ship game state, i.e. which cell of ships are hit
+witness set_player_ship_state(ship_state: ShipState): Void;
+
+export struct IntermediateShotResult {
+  shot_result: ShotResult;
+  updated_ship_state: ShipState;
+}
+
+export struct ShipState {
+  s11: Coord;
+  s12: Coord;
+  s13: Coord;
+  s14: Coord;
+  s21: Vector<2, Coord>;
+  s22: Vector<2, Coord>;
+  s23: Vector<2, Coord>;
+  s31: Vector<3, Coord>;
+  s32: Vector<3, Coord>;
+  s41: Vector<4, Coord>;
+}
+
+// Ship sizes are fixed and encoded in the field names
+// Each coordinate represents the upper left corner of one ship
+// v21 and v31 are vertical or horizontal flags
+export struct Ships {
+  s11: Coord;
+  s12: Coord;
+  s13: Coord;
+  s14: Coord;
+  s21: Coord;
+  s22: Coord;
+  s23: Coord;
+  s31: Coord;
+  s32: Coord;
+  s41: Coord;
+  v21: Boolean;
+  v22: Boolean;
+  v23: Boolean;
+  v31: Boolean;
+  v32: Boolean;
+  v41: Boolean;
+}
+
+constructor() {
+  game_state = GAME_STATE.waiting_p1;
+}
+
+export circuit join_p1(): Void {
+  assert game_state == GAME_STATE.waiting_p1 "Attempted to join a game that is not waiting for player 1";
+  assert !p1.is_some "Already in the game";
+  const sk = local_secret_key();
+  // we hash the secret key and the contract address to get a unique hash for the state for each game
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  const me = public_key(sk);
+  p1 = some<Bytes<32>>(me);
+
+  const ship_positions = player_ship_positions();
+  const cells = occupied_cells(ship_positions);
+  assert_valid_ship_position(ship_positions, cells);
+
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s11), cells);
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s12), cells);
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s13), cells);
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s14), cells);
+  assert_no_adjacent_neighbour_for_2ship(neighbour2_cells(ship_positions.s21, ship_positions.v21), cells);
+  assert_no_adjacent_neighbour_for_2ship(neighbour2_cells(ship_positions.s22, ship_positions.v22), cells);
+  assert_no_adjacent_neighbour_for_2ship(neighbour2_cells(ship_positions.s23, ship_positions.v23), cells);
+  assert_no_adjacent_neighbour_for_3ship(neighbour3_cells(ship_positions.s31, ship_positions.v31), cells);
+  assert_no_adjacent_neighbour_for_3ship(neighbour3_cells(ship_positions.s32, ship_positions.v32), cells);
+  assert_no_adjacent_neighbour_for_4ship(neighbour4_cells(ship_positions.s41, ship_positions.v41), cells);
+
+  const ship_state = create_ship_state(ship_positions);
+  p1_ship_positions_hash = persistent_commit<Ships>(ship_positions, secret_key);
+  p1_ship_state_hash = update_ship_state(ship_state, secret_key);
+
+  game_state = GAME_STATE.waiting_p2;
+}
+
+export circuit join_p2(): Void {
+  assert game_state == GAME_STATE.waiting_p2 "Attempted to join a game that is not waiting for player 2";
+  assert !p2.is_some "Already in the game";
+  const sk = local_secret_key();
+  // we hash the secret key and the contract address to get a unique hash for the state for each game
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  const me = public_key(sk);
+
+  assert p1.value != me "Already in the game";
+  p2 = some<Bytes<32>>(me);
+
+  const ship_positions = player_ship_positions();
+  const cells = occupied_cells(ship_positions);
+  assert_valid_ship_position(ship_positions, cells);
+
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s11), cells);
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s12), cells);
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s13), cells);
+  assert_neighbour_is_not_1ship(neighbour1_cells(ship_positions.s14), cells);
+  assert_no_adjacent_neighbour_for_2ship(neighbour2_cells(ship_positions.s21, ship_positions.v21), cells);
+  assert_no_adjacent_neighbour_for_2ship(neighbour2_cells(ship_positions.s22, ship_positions.v22), cells);
+  assert_no_adjacent_neighbour_for_2ship(neighbour2_cells(ship_positions.s23, ship_positions.v23), cells);
+  assert_no_adjacent_neighbour_for_3ship(neighbour3_cells(ship_positions.s31, ship_positions.v31), cells);
+  assert_no_adjacent_neighbour_for_3ship(neighbour3_cells(ship_positions.s32, ship_positions.v32), cells);
+  assert_no_adjacent_neighbour_for_4ship(neighbour4_cells(ship_positions.s41, ship_positions.v41), cells);
+
+  const ship_state = create_ship_state(ship_positions);
+  p2_ship_positions_hash = persistent_commit<Ships>(ship_positions, secret_key);
+  p2_ship_state_hash = update_ship_state(ship_state, secret_key);
+
+  game_state = GAME_STATE.p1_turn;
+}
+
+export circuit turn_player1(value: Coord): Void {
+  assert game_state == GAME_STATE.p1_turn "It is not 1st player's turn";
+
+  const sk = local_secret_key();
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  assert p1.value == public_key(sk) "You are not the 1st player";
+
+  assert_valid_coordinate(value);
+
+  const ships = get_ships(secret_key, p1_ship_positions_hash);
+  const ship_state = get_ship_state(secret_key, p1_ship_state_hash);
+
+  const result = calculate_shot_result(shot_attempt, ship_state, ships, p1.value);
+  p1_ship_state_hash = update_ship_state(result.updated_ship_state, secret_key);
+  last_shot_result = some<ShotResult>(result.shot_result);
+  if (result.shot_result.result != SHOT_RESULT.miss) {
+    p1_hit_counter.increment(1);
+  }
+
+  shot_attempt = value;
+
+  game_state = check_winner(GAME_STATE.p2_turn);
+}
+
+export circuit turn_player2(value: Coord): Void {
+  assert game_state == GAME_STATE.p2_turn "It is not 2nd player's turn";
+
+  const sk = local_secret_key();
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  assert p2.value == public_key(sk) "You are not the 2nd player";
+
+  assert_valid_coordinate(value);
+
+  const ships = get_ships(secret_key, p2_ship_positions_hash);
+  const ship_state = get_ship_state(secret_key, p2_ship_state_hash);
+
+  const result = calculate_shot_result(shot_attempt, ship_state, ships, p2.value);
+  p2_ship_state_hash = update_ship_state(result.updated_ship_state, secret_key);
+  last_shot_result = some<ShotResult>(result.shot_result);
+  if (result.shot_result.result != SHOT_RESULT.miss) {
+    p2_hit_counter.increment(1);
+  }
+
+  shot_attempt = value;
+
+  game_state = check_winner(GAME_STATE.p1_turn);
+}
+
+pure circuit assert_valid_ship_position(ship_positions: Ships, cells: Vector<20, Coord>): Void {
+  for cell in cells do {
+    assert_valid_coordinate(cell);
+  }
+  assert unique_vector(cells) "Ship cells must be unique";
+}
+
+pure circuit occupied_cells(ship_positions: Ships): Vector<20, Coord> {
+  const s21 = ship2_cells(ship_positions.s21, ship_positions.v21);
+  const s22 = ship2_cells(ship_positions.s22, ship_positions.v22);
+  const s23 = ship2_cells(ship_positions.s23, ship_positions.v23);
+  const s31 = ship3_cells(ship_positions.s31, ship_positions.v31);
+  const s32 = ship3_cells(ship_positions.s32, ship_positions.v32);
+  const s41 = ship4_cells(ship_positions.s41, ship_positions.v41);
+
+  return [
+    ship_positions.s11, ship_positions.s12, ship_positions.s13, ship_positions.s14,
+    s21[0], s21[1], s22[0], s22[1],  s23[0], s23[1],
+    s31[0], s31[1], s31[2], s32[0], s32[1], s32[2],
+    s41[0], s41[1], s41[2], s41[3]
+  ];
+}
+
+pure circuit unique_vector(v: Vector<20, Coord>): Boolean {
+  return (v[0] != v[1] && v[0] != v[2] && v[0] != v[3] && v[0] != v[4] && v[0] != v[5] && v[0] != v[6] && v[0] != v[7] && v[0] != v[8] && v[0] != v[9] && v[0] != v[10] && v[0] != v[11] && v[0] != v[12] && v[0] != v[13] && v[0] != v[14] && v[0] != v[15] && v[0] != v[16] && v[0] != v[17] && v[0] != v[18] && v[0] != v[19] &&
+          v[1] != v[2] && v[1] != v[3] && v[1] != v[4] && v[1] != v[5] && v[1] != v[6] && v[1] != v[7] && v[1] != v[8] && v[1] != v[9] && v[1] != v[10] && v[1] != v[11] && v[1] != v[12] && v[1] != v[13] && v[1] != v[14] && v[1] != v[15] && v[1] != v[16] && v[1] != v[17] && v[1] != v[18] && v[1] != v[19] &&
+          v[2] != v[3] && v[2] != v[4] && v[2] != v[5] && v[2] != v[6] && v[2] != v[7] && v[2] != v[8] && v[2] != v[9] && v[2] != v[10] && v[2] != v[11] && v[2] != v[12] && v[2] != v[13] && v[2] != v[14] && v[2] != v[15] && v[2] != v[16] && v[2] != v[17] && v[2] != v[18] && v[2] != v[19] &&
+          v[3] != v[4] && v[3] != v[5] && v[3] != v[6] && v[3] != v[7] && v[3] != v[8] && v[3] != v[9] && v[3] != v[10] && v[3] != v[11] && v[3] != v[12] && v[3] != v[13] && v[3] != v[14] && v[3] != v[15] && v[3] != v[16] && v[3] != v[17] && v[3] != v[18] && v[3] != v[19] &&
+          v[4] != v[5] && v[4] != v[6] && v[4] != v[7] && v[4] != v[8] && v[4] != v[9] && v[4] != v[10] && v[4] != v[11] && v[4] != v[12] && v[4] != v[13] && v[4] != v[14] && v[4] != v[15] && v[4] != v[16] && v[4] != v[17] && v[4] != v[18] && v[4] != v[19] &&
+          v[5] != v[6] && v[5] != v[7] && v[5] != v[8] && v[5] != v[9] && v[5] != v[10] && v[5] != v[11] && v[5] != v[12] && v[5] != v[13] && v[5] != v[14] && v[5] != v[15] && v[5] != v[16] && v[5] != v[17] && v[5] != v[18] && v[5] != v[19] &&
+          v[6] != v[7] && v[6] != v[8] && v[6] != v[9] && v[6] != v[10] && v[6] != v[11] && v[6] != v[12] && v[6] != v[13] && v[6] != v[14] && v[6] != v[15] && v[6] != v[16] && v[6] != v[17] && v[6] != v[18] && v[6] != v[19] &&
+          v[7] != v[8] && v[7] != v[9] && v[7] != v[10] && v[7] != v[11] && v[7] != v[12] && v[7] != v[13] && v[7] != v[14] && v[7] != v[15] && v[7] != v[16] && v[7] != v[17] && v[7] != v[18] && v[7] != v[19] &&
+          v[8] != v[9] && v[8] != v[10] && v[8] != v[11] && v[8] != v[12] && v[8] != v[13] && v[8] != v[14] && v[8] != v[15] && v[8] != v[16] && v[8] != v[17] && v[8] != v[18] && v[8] != v[19] &&
+          v[9] != v[10] && v[9] != v[11] && v[9] != v[12] && v[9] != v[13] && v[9] != v[14] && v[9] != v[15] && v[9] != v[16] && v[9] != v[17] && v[9] != v[18] && v[9] != v[19] &&
+          v[10] != v[11] && v[10] != v[12] && v[10] != v[13] && v[10] != v[14] && v[10] != v[15] && v[10] != v[16] && v[10] != v[17] && v[10] != v[18] && v[10] != v[19] &&
+          v[11] != v[12] && v[11] != v[13] && v[11] != v[14] && v[11] != v[15] && v[11] != v[16] && v[11] != v[17] && v[11] != v[18] && v[11] != v[19] &&
+          v[12] != v[13] && v[12] != v[14] && v[12] != v[15] && v[12] != v[16] && v[12] != v[17] && v[12] != v[18] && v[12] != v[19] &&
+          v[13] != v[14] && v[13] != v[15] && v[13] != v[16] && v[13] != v[17] && v[13] != v[18] && v[13] != v[19] &&
+          v[14] != v[15] && v[14] != v[16] && v[14] != v[17] && v[14] != v[18] && v[14] != v[19] &&
+          v[15] != v[16] && v[15] != v[17] && v[15] != v[18] && v[15] != v[19] &&
+          v[16] != v[17] && v[16] != v[18] && v[16] != v[19] &&
+          v[17] != v[18] && v[17] != v[19] &&
+          v[18] != v[19]);
+}
+
+circuit check_winner(next: GAME_STATE): GAME_STATE {
+  const cell_count = 20; // 4 + 3 + 3 + 2 + 2 + 2 + 1 + 1 + 1 + 1 cells of all ships
+  if (p2_hit_counter == cell_count) {
+    return GAME_STATE.p1_wins;
+  } else if (p1_hit_counter == cell_count) {
+    return GAME_STATE.p2_wins;
+  } else {
+    return next;
+  }
+}
+
+pure circuit create_ship_state(ships: Ships): ShipState {
+  return ShipState {
+    s11: ships.s11,
+    s12: ships.s12,
+    s13: ships.s13,
+    s14: ships.s14,
+    s21: ship2_cells(ships.s21, ships.v21),
+    s22: ship2_cells(ships.s22, ships.v22),
+    s23: ship2_cells(ships.s23, ships.v23),
+    s31: ship3_cells(ships.s31, ships.v31),
+    s32: ship3_cells(ships.s32, ships.v32),
+    s41: ship4_cells(ships.s41, ships.v41)
+  };
+}
+
+circuit get_ship_state(sk: Bytes<32>, expected_state_hash: Bytes<32>): ShipState {
+  const state = player_ship_state();
+  const state_hash = persistent_commit<ShipState>(state, sk);
+  assert state_hash == expected_state_hash "Ship state hash mismatch";
+  return state;
+}
+
+circuit get_ships(sk: Bytes<32>, expected_state_hash: Bytes<32>): Ships {
+  const state = player_ship_positions();
+  const state_hash = persistent_commit<Ships>(state, sk);
+  assert state_hash == expected_state_hash "Ships hash mismatch";
+  return state;
+}
+
+circuit update_ship_state(updated_ship_state: ShipState, sk: Bytes<32>): Bytes<32> {
+  const state_hash = persistent_commit<ShipState>(updated_ship_state, sk);
+  set_player_ship_state(updated_ship_state);
+  return state_hash;
+}
+
+export pure circuit calculate_shot_result(
+  shot_attempt: Coord,
+  ship_state: ShipState,
+  ships: Ships,
+  player: Bytes<32>
+): IntermediateShotResult {
+  // Find the Target: Check if the shot hits any part of a ship.
+  // Update the Ship State: If the shot hits, mark that part of the ship as "damaged." with coordinate set to { 0, 0 }
+  // Check for Ship Sunk: If all parts of the ship are damaged, it's sunk; if no part is hit, it's a miss; otherwise, it's a hit.
+  // Return the Result: Report whether the shot was a miss, a hit, or if a ship was sunk.
+  const updated_ship_state = ShipState {
+    s11: update_hit_cell(ship_state.s11, shot_attempt),
+    s12: update_hit_cell(ship_state.s12, shot_attempt),
+    s13: update_hit_cell(ship_state.s13, shot_attempt),
+    s14: update_hit_cell(ship_state.s14, shot_attempt),
+    s21: update_hit_cell_state<2>(ship_state.s21, shot_attempt),
+    s22: update_hit_cell_state<2>(ship_state.s22, shot_attempt),
+    s23: update_hit_cell_state<2>(ship_state.s23, shot_attempt),
+    s31: update_hit_cell_state<3>(ship_state.s31, shot_attempt),
+    s32: update_hit_cell_state<3>(ship_state.s32, shot_attempt),
+    s41: update_hit_cell_state<4>(ship_state.s41, shot_attempt)
+  };
+  return IntermediateShotResult {
+    calculate_shot_result(shot_attempt, ship_state, updated_ship_state, ships, player),
+    updated_ship_state
+  };
+}
+
+pure circuit calculate_shot_result(
+  shot_attempt: Coord,
+  ship_state: ShipState,
+  updated_ship_state: ShipState,
+  ships: Ships,
+  player: Bytes<32>
+): ShotResult {
+  if (contains<2, Coord>(ship_state.s21, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s21, ship_cell: ships.s21, ship_v: ships.v21 };
+    return get_shot_result<2>(shot_attempt, updated_ship_state.s21, player, ship_def);
+  } else if (contains<2, Coord>(ship_state.s22, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s22, ship_cell: ships.s22, ship_v: ships.v22 };
+    return get_shot_result<2>(shot_attempt, updated_ship_state.s22, player, ship_def);
+  } else if (contains<2, Coord>(ship_state.s23, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s23, ship_cell: ships.s23, ship_v: ships.v23 };
+    return get_shot_result<2>(shot_attempt, updated_ship_state.s23, player, ship_def);
+  } else if (contains<3, Coord>(ship_state.s31, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s31, ship_cell: ships.s31, ship_v: ships.v31 };
+    return get_shot_result<3>(shot_attempt, updated_ship_state.s31, player, ship_def);
+  } else if (contains<3, Coord>(ship_state.s32, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s32, ship_cell: ships.s32, ship_v: ships.v32 };
+    return get_shot_result<3>(shot_attempt, updated_ship_state.s32, player, ship_def);
+  } else if (contains<4, Coord>(ship_state.s41, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s41, ship_cell: ships.s41, ship_v: ships.v41 };
+    return get_shot_result<4>(shot_attempt, updated_ship_state.s41, player, ship_def);
+  } else {
+    return ShotResult {
+      cell: shot_attempt,
+      result: SHOT_RESULT.miss,
+      player: player,
+      ship_def: unknown_ship_def()
+    };
+  }
+}
+
+pure circuit assert_no_adjacent_ship(cell: Coord, ship: Coord): Void {
+    assert (cell == ship) == false "Ships can't be adjacent";
+}
+
+pure circuit assert_neighbour_is_not_1ship(neighbours: Vector<8, Coord>, coords: Vector<20, Coord>): Void {
+  for neighbour in neighbours do {
+    assert_neighbour_is_not_ship(neighbour, coords);
+  }
+}
+
+pure circuit assert_no_adjacent_neighbour_for_2ship(neighbours: Vector<10, Coord>, coords: Vector<20, Coord>): Void {
+  for neighbour in neighbours do {
+    assert_neighbour_is_not_ship(neighbour, coords);
+  }
+}
+
+pure circuit assert_no_adjacent_neighbour_for_3ship(neighbours: Vector<12, Coord>, coords: Vector<20, Coord>): Void {
+  for neighbour in neighbours do {
+    assert_neighbour_is_not_ship(neighbour, coords);
+  }
+}
+
+pure circuit assert_no_adjacent_neighbour_for_4ship(neighbours: Vector<14, Coord>, coords: Vector<20, Coord>): Void {
+  for neighbour in neighbours do {
+    assert_neighbour_is_not_ship(neighbour, coords);
+  }
+}
+
+pure circuit assert_no_adjacent_neighbour_for_5ship(neighbours: Vector<16, Coord>, coords: Vector<20, Coord>): Void {
+  for neighbour in neighbours do {
+    assert_neighbour_is_not_ship(neighbour, coords);
+  }
+}
+
+pure circuit assert_neighbour_is_not_ship(neighbour: Coord, coords: Vector<20, Coord>): Void {
+  for coord in coords do {
+    assert_no_adjacent_ship(neighbour, coord);
+  }
+}
+
+pure circuit neighbour1_cells(cell: Coord): Vector<8, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1 },
+       Coord { x: cell.x - 1, y: cell.y },
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4> },
+       Coord { x: cell.x, y: cell.y - 1 },
+       Coord { x: cell.x, y: cell.y + 1 as Uint<4> },
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1 },
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y },
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4> }
+    ];
+}
+
+
+pure circuit neighbour2_cells(cell: Coord, vertical: Boolean): Vector<10, Coord> {
+  if (vertical) {
+    return vertical_neighbour2_cells(cell);
+  } else {
+    return horizontal_neighbour2_cells(cell);
+  }
+}
+
+pure circuit neighbour3_cells(cell: Coord, vertical: Boolean): Vector<12, Coord> {
+  if (vertical) {
+    return vertical_neighbour3_cells(cell);
+  } else {
+    return horizontal_neighbour3_cells(cell);
+  }
+}
+
+pure circuit neighbour4_cells(cell: Coord, vertical: Boolean): Vector<14, Coord> {
+  if (vertical) {
+    return vertical_neighbour4_cells(cell);
+  } else {
+    return horizontal_neighbour4_cells(cell);
+  }
+}
+
+pure circuit neighbour5_cells(cell: Coord, vertical: Boolean): Vector<16, Coord> {
+  if (vertical) {
+    return vertical_neighbour5_cells(cell);
+  } else {
+    return horizontal_neighbour5_cells(cell);
+  }
+}
+
+pure circuit horizontal_neighbour2_cells(cell: Coord): Vector<10, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1},
+       Coord { x: cell.x - 1, y: cell.y},
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x, y: cell.y - 1},
+       Coord { x: cell.x, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 2 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 2 as Uint<4>, y: cell.y},
+       Coord { x: cell.x + 2 as Uint<4>, y: cell.y + 1 as Uint<4>}
+    ];
+}
+
+pure circuit vertical_neighbour2_cells(cell: Coord): Vector<10, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1},
+       Coord { x: cell.x - 1, y: cell.y},
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x, y: cell.y - 1},
+       Coord { x: cell.x, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 2 as Uint<4>}
+    ];
+}
+
+pure circuit horizontal_neighbour3_cells(cell: Coord): Vector<12, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1},
+       Coord { x: cell.x - 1, y: cell.y},
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x, y: cell.y - 1},
+       Coord { x: cell.x, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 2 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 2 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 3 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 3 as Uint<4>, y: cell.y},
+       Coord { x: cell.x + 3 as Uint<4>, y: cell.y + 1 as Uint<4>}
+    ];
+}
+
+pure circuit vertical_neighbour3_cells(cell: Coord): Vector<12, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1},
+       Coord { x: cell.x - 1, y: cell.y},
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 3 as Uint<4>},
+       Coord { x: cell.x, y: cell.y - 1},
+       Coord { x: cell.x, y: cell.y + 3 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 3 as Uint<4>}
+    ];
+}
+
+pure circuit horizontal_neighbour4_cells(cell: Coord): Vector<14, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1},
+       Coord { x: cell.x - 1, y: cell.y},
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x, y: cell.y - 1},
+       Coord { x: cell.x, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 2 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 2 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 3 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 3 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 4 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 4 as Uint<4>, y: cell.y},
+       Coord { x: cell.x + 4 as Uint<4>, y: cell.y + 1 as Uint<4>}
+    ];
+}
+
+pure circuit vertical_neighbour4_cells(cell: Coord): Vector<14, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1},
+       Coord { x: cell.x - 1, y: cell.y},
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 3 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 4 as Uint<4>},
+       Coord { x: cell.x, y: cell.y - 1},
+       Coord { x: cell.x, y: cell.y + 4 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 3 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 4 as Uint<4>}
+    ];
+}
+
+pure circuit horizontal_neighbour5_cells(cell: Coord): Vector<16, Coord> {
+    return [
+      Coord { x: cell.x - 1, y: cell.y - 1},
+      Coord { x: cell.x - 1, y: cell.y},
+      Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+      Coord { x: cell.x, y: cell.y - 1},
+      Coord { x: cell.x, y: cell.y + 1 as Uint<4>},
+      Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+      Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+      Coord { x: cell.x + 2 as Uint<4>, y: cell.y - 1},
+      Coord { x: cell.x + 2 as Uint<4>, y: cell.y + 1 as Uint<4>},
+      Coord { x: cell.x + 3 as Uint<4>, y: cell.y - 1},
+      Coord { x: cell.x + 3 as Uint<4>, y: cell.y + 1 as Uint<4>},
+      Coord { x: cell.x + 4 as Uint<4>, y: cell.y - 1},
+      Coord { x: cell.x + 4 as Uint<4>, y: cell.y + 1 as Uint<4>},
+      Coord { x: cell.x + 5 as Uint<4>, y: cell.y - 1},
+      Coord { x: cell.x + 5 as Uint<4>, y: cell.y},
+      Coord { x: cell.x + 5 as Uint<4>, y: cell.y + 1 as Uint<4>}
+    ];
+}
+
+pure circuit vertical_neighbour5_cells(cell: Coord): Vector<16, Coord> {
+    return [
+       Coord { x: cell.x - 1, y: cell.y - 1},
+       Coord { x: cell.x - 1, y: cell.y},
+       Coord { x: cell.x - 1, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 3 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 4 as Uint<4>},
+       Coord { x: cell.x - 1, y: cell.y + 5 as Uint<4>},
+       Coord { x: cell.x, y: cell.y - 1},
+       Coord { x: cell.x, y: cell.y + 5 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y - 1},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 1 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 2 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 3 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 4 as Uint<4>},
+       Coord { x: cell.x + 1 as Uint<4>, y: cell.y + 5 as Uint<4>}
+    ];
+}

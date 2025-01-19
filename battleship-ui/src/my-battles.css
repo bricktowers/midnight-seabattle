@@ -1,0 +1,11 @@
+.boards {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+}
