@@ -1,0 +1,45 @@
+services:
+  proof-server:
+    container_name: 'battleship-api-proof-server'
+    image: 'midnightnetwork/proof-server:3.0.2'
+    ports:
+      - "6300:6300"
+    environment:
+      RUST_BACKTRACE: "full"
+      RUST_LOG: "trace,actix_web::middleware::logger=trace,actix_web=trace"
+  indexer:
+    container_name: 'battleship-api-indexer'
+    image: 'midnightnetwork/midnight-pubsub-indexer:2.2.1'
+    platform: linux/amd64
+    ports:
+      - '8088:8088'
+    command: ['-Dlogback.configurationFile=logback-json-file.xml']
+    environment:
+      LOG_LEVEL: 'TRACE'
+      LEDGER_NETWORK_ID: 'Undeployed'
+      SUBSTRATE_NODE_WS_URL: 'ws://node:9944'
+      OTEL_JAVAAGENT_ENABLED: 'false'
+    healthcheck:
+      test: ['CMD', 'egrep', '"Block .* was stored at height 0"', '/tmp/app_logs/server.log']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    depends_on:
+      node:
+        condition: service_started
+  node:
+    #image: 'midnightnetwork/midnight-node:0.6.3-69581601'
+    image: 'midnightnetwork/midnight-node:0.6.6-6288973b'
+    platform: linux/amd64
+    container_name: 'battleship-api-node'
+    ports:
+      - "9944:9944"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:9944/health" ]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    environment:
+      CFG_PRESET: "dev"
+

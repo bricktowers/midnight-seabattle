@@ -1,0 +1,16 @@
+{
+  "FIREBASE_API_KEY":  "AIzaSyCw7yjR6u4UhGed-I2jMRGHKH4lE9AXx0k",
+  "FIREBASE_AUTH_DOMAIN": "btow-playground.firebaseapp.com",
+  "FIREBASE_PROJECT_ID":  "btow-playground",
+  "FIREBASE_STORAGE_BUCKET": "btow-playground.appspot.com",
+  "FIREBASE_MESSAGING_SENDER_ID":  "563705422557",
+  "FIREBASE_APP_ID": "1:563705422557:web:0e00364d9067850a433134",
+  "FIREBASE_APPCHECK_RECAPTCHA_SITE_KEY": "6Lf8vS8qAAAAALsygygA5YFdm_lxPx5ei8wtmB-A",
+  "FIREBASE_APPCHECK_RECAPTCHA_ENTERPRISE_SITE_KEY": "",
+  "BRICK_TOWERS_TOKEN_ADDRESS": "0200342cb118a1b4c71f6e502b51f830410d6114b9843dd4ed47c9a7d5ff367baae2",
+  "LOGGING_LEVEL": "trace",
+  "NETWORK_ID": "Undeployed",
+  "PUBLIC_URL": "http://127.0.0.1:8080",
+  "INDEXER_URI":  "http://localhost:8088/api/v1/graphql",
+  "INDEXER_WS_URI": "ws://localhost:8088/api/v1/graphql/ws"
+}

@@ -1,0 +1,85 @@
+.ship5horizontal::before,
+.ship5vertical::before,
+.ship4horizontal::before,
+.ship4vertical::before,
+.ship3horizontal::before,
+.ship3vertical::before,
+.ship2horizontal::before,
+.ship2vertical::before,
+.ship1 {
+  top: -1px;
+  left: -1px;
+  content: '';
+  display: block;
+  background-color: #367c59;
+  border: 1px solid #000;
+  z-index: 10;
+  position: absolute;
+}
+
+.ship5horizontal::before,
+.ship4horizontal::before,
+.ship3horizontal::before,
+.ship2horizontal::before,
+.ship1 {
+  border-top-right-radius: 32px;
+  border-bottom-right-radius: 32px;
+  box-shadow: 4px 4px 8px black;
+}
+
+
+.ship5vertical::before,
+.ship4vertical::before,
+.ship3vertical::before,
+.ship2vertical::before {
+  border-top-left-radius: 32px;
+  border-top-right-radius: 32px;
+  box-shadow: 4px 4px 8px black;
+}
+
+.ship5horizontal::before {
+  width: 133px;
+  height: 25px;
+}
+
+.ship5vertical::before {
+  width: 25px;
+  height: 133px;
+}
+
+.ship4horizontal::before {
+  width: 106px;
+  height: 25px;
+}
+
+.ship4vertical::before {
+  width: 25px;
+  height: 106px;
+}
+
+.ship3horizontal::before {
+  width: 79px;
+  height: 25px;
+}
+
+.ship3vertical::before {
+  width: 25px;
+  height: 79px;
+}
+
+.ship2horizontal::before {
+  width: 52px;
+  height: 25px;
+}
+
+.ship2vertical::before {
+  width: 25px;
+  height: 52px;
+}
+
+.ship1::before {
+  width: 25px;
+  height: 25px;
+}
+
+

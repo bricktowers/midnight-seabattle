@@ -1,0 +1,342 @@
+// The main circuits are join_p1, join_p2, turn_player1, turn_player2, we need 2 players joining to start the game,
+// and then they take turns to shoot at each other's ships until game end conditions are met.
+//
+// Important pattern is implemented by calculating state changes in the contract and submitting them to the player's
+// private state for safe keeping until the next turn. A hash is calculated and stored on ledger to ensure that the
+// player's state is not changed between turns.
+//
+// Keeping a single hash of the whole state object helps to ensure that no private information gets leaked by
+// processing individual ships in specific order, which could reveal which specific ship is hit.
+pragma language_version >= 0.13.0;
+
+import CompactStandardLibrary;
+import "../../battleship-contract-commons/GameCommons";
+
+export { Maybe }
+export { CoinInfo };
+export { GAME_STATE }
+export { SHOT_RESULT }
+export { ShotResult }
+export { Coord }
+export { SHIP }
+export { ShipDef }
+export { public_key }
+
+export ledger game_state: Cell<GAME_STATE>;              // tracks the current game state according to the game state machine
+export ledger shot_attempt: Cell<Coord>;                 // coordinate of the opponent's shot to be validated during the player's turn
+export ledger last_shot_result: Cell<Maybe<ShotResult>>; // validated shot result
+export sealed ledger reward_coin_color: Cell<Bytes<32>>; // identifier of the coins used for rewards
+export ledger reward: Cell<QualifiedCoinInfo>;           // reference to the funds locked in the contract
+
+// Player 1 public state
+export ledger p1: Cell<Maybe<Bytes<32>>>;                     // hash of player 1 secret, used to uniquely identify the player
+export ledger p1_public_key: Cell<Maybe<ZswapCoinPublicKey>>; // public key of player 1, where to send the reward
+export ledger p1_ship_positions_hash: Cell<Bytes<32>>;        // hash of player's board layout, to ensure that it is not changed
+export ledger p1_ship_state_hash: Cell<Bytes<32>>;            // hash of player's ships current state, to ensure it is not changed between turns
+export ledger p1_hit_counter: Counter;                        // counter of hits on player's ships to determine the winner
+
+// Player 2 public state
+export ledger p2: Cell<Maybe<Bytes<32>>>;
+export ledger p2_public_key: Cell<Maybe<ZswapCoinPublicKey>>;
+export ledger p2_ship_positions_hash: Cell<Bytes<32>>;
+export ledger p2_ship_state_hash: Cell<Bytes<32>>;
+export ledger p2_hit_counter: Counter;
+
+// Private data provided by each player
+witness local_secret_key(): Bytes<32>;                      // player's secret key used for identifying the player and hashing the game state
+witness player_ship_positions(): Ships;                     // ships placement as set by the player at the beginning of the game
+witness player_ship_state(): ShipState;                     // current state of the player's ships, which ships are hit or sunk
+witness set_player_ship_state(ship_state: ShipState): Void; // used by the contract to update the player's current ship state
+
+// Used to calculate and pass around the shot result during the player's turn
+export struct IntermediateShotResult {
+  shot_result: ShotResult;
+  updated_ship_state: ShipState;
+}
+
+// Tracks the not hit cells of all ships, each ship is represented by a vector of coordinates, which are nullified as they are hit
+export struct ShipState {
+  s21: Vector<2, Coord>;
+  s31: Vector<3, Coord>;
+  s32: Vector<3, Coord>;
+  s41: Vector<4, Coord>;
+  s51: Vector<5, Coord>;
+}
+
+// Ship sizes are fixed and encoded in the field names
+// Each coordinate represents the upper left corner of each ship
+// Each boolean field represents whether each ship is positioned vertically
+export struct Ships {
+  s21: Coord;
+  s31: Coord;
+  s32: Coord;
+  s41: Coord;
+  s51: Coord;
+  v21: Boolean;
+  v31: Boolean;
+  v32: Boolean;
+  v41: Boolean;
+  v51: Boolean;
+}
+
+constructor(token_address: ContractAddress) {
+  game_state = GAME_STATE.waiting_p1;
+  reward_coin_color = token_type(pad(32, "brick_towers_coin"), token_address);
+}
+
+export circuit join_p1(coin: CoinInfo): Void {
+  assert game_state == GAME_STATE.waiting_p1 "Attempted to join a game that is not waiting for player 1";
+  assert !p1.is_some "Already in the game";
+  const sk = local_secret_key();
+
+  // We hash the secret key with the unique contract address of each game to get a unique randomness
+  // to use for hashing in each game to avoid matching hashes if a player uses the same board state in several games
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  const me = public_key(sk);
+  p1 = some<Bytes<32>>(me);
+
+  // Validate and add the reward coin to the contract
+  receive(coin);
+  assert coin.value == 100 "Game requires 100 coins";
+  assert coin.color == reward_coin_color "Invalid coin provided";
+  reward.write_coin(coin, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+  p1_public_key = some<ZswapCoinPublicKey>(own_public_key());
+
+  // Validate the initial ship positions and compute the current state of the ships
+  const ship_positions = player_ship_positions();
+  assert_valid_ship_position(ship_positions);
+  const ship_state = create_ship_state(ship_positions);
+
+  // Hash the ship positions, so we can check that user did not change them in their private state later
+  p1_ship_positions_hash = persistent_commit<Ships>(ship_positions, secret_key);
+  p1_ship_state_hash = update_ship_state(ship_state, secret_key);
+
+  game_state = GAME_STATE.waiting_p2;
+}
+
+export circuit join_p2(coin: CoinInfo): Void {
+  assert game_state == GAME_STATE.waiting_p2 "Attempted to join a game that is not waiting for player 2";
+  assert !p2.is_some "Already in the game";
+  const sk = local_secret_key();
+
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  const me = public_key(sk);
+  assert p1.value != me "Already in the game";
+  p2 = some<Bytes<32>>(me);
+
+  receive(coin);
+  assert coin.value == 100 "Game requires 100 coins";
+  assert coin.color == reward_coin_color "Invalid coin provided";
+  reward.write_coin(merge_coin_immediate(reward, coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+  p2_public_key = some<ZswapCoinPublicKey>(own_public_key());
+
+  const ship_positions = player_ship_positions();
+  assert_valid_ship_position(ship_positions);
+  const ship_state = create_ship_state(ship_positions);
+  p2_ship_positions_hash = persistent_commit<Ships>(ship_positions, secret_key);
+  p2_ship_state_hash = update_ship_state(ship_state, secret_key);
+
+  game_state = GAME_STATE.p1_turn;
+}
+
+export circuit turn_player1(value: Coord): Void {
+  assert game_state == GAME_STATE.p1_turn "It is not 1st player's turn";
+
+  const sk = local_secret_key();
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  assert p1.value == public_key(sk) "You are not the 1st player";
+
+  // Basic validation of the opponent's shot
+  assert_valid_coordinate(value);
+
+  // Retrieve and validate the player's ship states
+  const ships = get_ships(secret_key, p1_ship_positions_hash);
+  const ship_state = get_ship_state(secret_key, p1_ship_state_hash);
+
+  // Calculate the shot result and update the ship state
+  const result = calculate_shot_result(shot_attempt, ship_state, ships, p1.value);
+  p1_ship_state_hash = update_ship_state(result.updated_ship_state, secret_key);
+  last_shot_result = some<ShotResult>(result.shot_result);
+  if (result.shot_result.result != SHOT_RESULT.miss) {
+    p1_hit_counter.increment(1);
+  }
+
+  // Store the shot attempt for the next player's turn
+  shot_attempt = value;
+
+  // Finally check if this shot ended the game
+  game_state = check_winner(GAME_STATE.p2_turn);
+}
+
+export circuit turn_player2(value: Coord): Void {
+  assert game_state == GAME_STATE.p2_turn "It is not 2nd player's turn";
+
+  const sk = local_secret_key();
+  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  assert p2.value == public_key(sk) "You are not the 2nd player";
+
+  assert_valid_coordinate(value);
+
+  const ships = get_ships(secret_key, p2_ship_positions_hash);
+  const ship_state = get_ship_state(secret_key, p2_ship_state_hash);
+
+  const result = calculate_shot_result(shot_attempt, ship_state, ships, p2.value);
+  p2_ship_state_hash = update_ship_state(result.updated_ship_state, secret_key);
+  last_shot_result = some<ShotResult>(result.shot_result);
+  if (result.shot_result.result != SHOT_RESULT.miss) {
+    p2_hit_counter.increment(1);
+  }
+
+  shot_attempt = value;
+
+  game_state = check_winner(GAME_STATE.p1_turn);
+}
+
+// Validated that the player has placed their ships correctly
+pure circuit assert_valid_ship_position(ship_positions: Ships): Void {
+  const cells = occupied_cells(ship_positions);
+  for cell in cells do {
+    assert_valid_coordinate(cell);
+  }
+  assert unique_vector(cells) "Ship cells must be unique";
+}
+
+// Converts ship positions into a vector of all occupied coordinates
+pure circuit occupied_cells(ship_positions: Ships): Vector<17, Coord> {
+  const s21 = ship2_cells(ship_positions.s21, ship_positions.v21);
+  const s31 = ship3_cells(ship_positions.s31, ship_positions.v31);
+  const s32 = ship3_cells(ship_positions.s32, ship_positions.v32);
+  const s41 = ship4_cells(ship_positions.s41, ship_positions.v41);
+  const s51 = ship5_cells(ship_positions.s51, ship_positions.v51);
+
+  return [
+    s21[0], s21[1],
+    s31[0], s31[1], s31[2], s32[0], s32[1], s32[2],
+    s41[0], s41[1], s41[2], s41[3],
+    s51[0], s51[1], s51[2], s51[3], s51[4]
+  ];
+}
+
+// Checks if all the coordinates are unique, i.e. the ships are not overlapping
+pure circuit unique_vector(v: Vector<17, Coord>): Boolean {
+  return (v[0] != v[1] && v[0] != v[2] && v[0] != v[3] && v[0] != v[4] && v[0] != v[5] && v[0] != v[6] && v[0] != v[7] && v[0] != v[8] && v[0] != v[9] && v[0] != v[10] && v[0] != v[11] && v[0] != v[12] && v[0] != v[13] && v[0] != v[14] && v[0] != v[15] && v[0] != v[16] &&
+          v[1] != v[2] && v[1] != v[3] && v[1] != v[4] && v[1] != v[5] && v[1] != v[6] && v[1] != v[7] && v[1] != v[8] && v[1] != v[9] && v[1] != v[10] && v[1] != v[11] && v[1] != v[12] && v[1] != v[13] && v[1] != v[14] && v[1] != v[15] && v[1] != v[16] &&
+          v[2] != v[3] && v[2] != v[4] && v[2] != v[5] && v[2] != v[6] && v[2] != v[7] && v[2] != v[8] && v[2] != v[9] && v[2] != v[10] && v[2] != v[11] && v[2] != v[12] && v[2] != v[13] && v[2] != v[14] && v[2] != v[15] && v[2] != v[16] &&
+          v[3] != v[4] && v[3] != v[5] && v[3] != v[6] && v[3] != v[7] && v[3] != v[8] && v[3] != v[9] && v[3] != v[10] && v[3] != v[11] && v[3] != v[12] && v[3] != v[13] && v[3] != v[14] && v[3] != v[15] && v[3] != v[16] &&
+          v[4] != v[5] && v[4] != v[6] && v[4] != v[7] && v[4] != v[8] && v[4] != v[9] && v[4] != v[10] && v[4] != v[11] && v[4] != v[12] && v[4] != v[13] && v[4] != v[14] && v[4] != v[15] && v[4] != v[16] &&
+          v[5] != v[6] && v[5] != v[7] && v[5] != v[8] && v[5] != v[9] && v[5] != v[10] && v[5] != v[11] && v[5] != v[12] && v[5] != v[13] && v[5] != v[14] && v[5] != v[15] && v[5] != v[16] &&
+          v[6] != v[7] && v[6] != v[8] && v[6] != v[9] && v[6] != v[10] && v[6] != v[11] && v[6] != v[12] && v[6] != v[13] && v[6] != v[14] && v[6] != v[15] && v[6] != v[16] &&
+          v[7] != v[8] && v[7] != v[9] && v[7] != v[10] && v[7] != v[11] && v[7] != v[12] && v[7] != v[13] && v[7] != v[14] && v[7] != v[15] && v[7] != v[16] &&
+          v[8] != v[9] && v[8] != v[10] && v[8] != v[11] && v[8] != v[12] && v[8] != v[13] && v[8] != v[14] && v[8] != v[15] && v[8] != v[16] &&
+          v[9] != v[10] && v[9] != v[11] && v[9] != v[12] && v[9] != v[13] && v[9] != v[14] && v[9] != v[15] && v[9] != v[16] &&
+          v[10] != v[11] && v[10] != v[12] && v[10] != v[13] && v[10] != v[14] && v[10] != v[15] && v[10] != v[16] &&
+          v[11] != v[12] && v[11] != v[13] && v[11] != v[14] && v[11] != v[15] && v[11] != v[16] &&
+          v[12] != v[13] && v[12] != v[14] && v[12] != v[15] && v[12] != v[16] &&
+          v[13] != v[14] && v[13] != v[15] && v[13] != v[16] &&
+          v[14] != v[15] && v[14] != v[16] &&
+          v[15] != v[16]);
+}
+
+// Checks if the game should end and if so, sends the reward to the winner
+circuit check_winner(next: GAME_STATE): GAME_STATE {
+  const cell_count = 17; // 5 + 4 + 3 + 3 + 2 cells of all ships
+  if (p2_hit_counter == cell_count) {
+    send(reward, left<ZswapCoinPublicKey, ContractAddress>(p1_public_key.value), reward.value);
+    return GAME_STATE.p1_wins;
+  } else if (p1_hit_counter == cell_count) {
+    send(reward, left<ZswapCoinPublicKey, ContractAddress>(p2_public_key.value), reward.value);
+    return GAME_STATE.p2_wins;
+  } else {
+    return next;
+  }
+}
+
+// Creates the explicit ship coordinates from the ship position and orientation
+pure circuit create_ship_state(ships: Ships): ShipState {
+  return ShipState {
+    s21: ship2_cells(ships.s21, ships.v21),
+    s31: ship3_cells(ships.s31, ships.v31),
+    s32: ship3_cells(ships.s32, ships.v32),
+    s41: ship4_cells(ships.s41, ships.v41),
+    s51: ship5_cells(ships.s51, ships.v51)
+  };
+}
+
+// Retrieves the current ship state from the player's private state and validates that it is unchanged
+circuit get_ship_state(sk: Bytes<32>, expected_state_hash: Bytes<32>): ShipState {
+  const state = player_ship_state();
+  const state_hash = persistent_commit<ShipState>(state, sk);
+  assert state_hash == expected_state_hash "Ship state hash mismatch";
+  return state;
+}
+
+// Retrieves the initial ship layout from the player's private state and validates that it is unchanged
+circuit get_ships(sk: Bytes<32>, expected_state_hash: Bytes<32>): Ships {
+  const state = player_ship_positions();
+  const state_hash = persistent_commit<Ships>(state, sk);
+  assert state_hash == expected_state_hash "Ships hash mismatch";
+  return state;
+}
+
+// Updates the ship state in the player's private state and returns the new state hash
+circuit update_ship_state(updated_ship_state: ShipState, sk: Bytes<32>): Bytes<32> {
+  const state_hash = persistent_commit<ShipState>(updated_ship_state, sk);
+  set_player_ship_state(updated_ship_state);
+  return state_hash;
+}
+
+// Checks if player has hit a ship and returns an updated ship state
+export pure circuit calculate_shot_result(
+  shot_attempt: Coord,
+  ship_state: ShipState,
+  ships: Ships,
+  player: Bytes<32>
+): IntermediateShotResult {
+  // Find the Target: Check if the shot hits any part of a ship.
+  // Update the Ship State: If the shot hits, mark that part of the ship as "damaged." with coordinate set to { 0, 0 }
+  // Check for Ship Sunk: If all parts of the ship are damaged, it's sunk; if no part is hit, it's a miss; otherwise, it's a hit.
+  // Return the Result: Report whether the shot was a miss, a hit, or if a ship was sunk.
+  const updated_ship_state = ShipState {
+    s21: update_hit_cell_state<2>(ship_state.s21, shot_attempt),
+    s31: update_hit_cell_state<3>(ship_state.s31, shot_attempt),
+    s32: update_hit_cell_state<3>(ship_state.s32, shot_attempt),
+    s41: update_hit_cell_state<4>(ship_state.s41, shot_attempt),
+    s51: update_hit_cell_state<5>(ship_state.s51, shot_attempt)
+  };
+  return IntermediateShotResult {
+    calculate_shot_result(shot_attempt, ship_state, updated_ship_state, ships, player),
+    updated_ship_state
+  };
+}
+
+pure circuit calculate_shot_result(
+  shot_attempt: Coord,
+  ship_state: ShipState,
+  updated_ship_state: ShipState,
+  ships: Ships,
+  player: Bytes<32>
+): ShotResult {
+  if (contains<2, Coord>(ship_state.s21, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s21, ship_cell: ships.s21, ship_v: ships.v21 };
+    return get_shot_result<2>(shot_attempt, updated_ship_state.s21, player, ship_def);
+  } else if (contains<3, Coord>(ship_state.s31, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s31, ship_cell: ships.s31, ship_v: ships.v31 };
+    return get_shot_result<3>(shot_attempt, updated_ship_state.s31, player, ship_def);
+  } else if (contains<3, Coord>(ship_state.s32, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s32, ship_cell: ships.s32, ship_v: ships.v32 };
+    return get_shot_result<3>(shot_attempt, updated_ship_state.s32, player, ship_def);
+  } else if (contains<4, Coord>(ship_state.s41, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s41, ship_cell: ships.s41, ship_v: ships.v41 };
+    return get_shot_result<4>(shot_attempt, updated_ship_state.s41, player, ship_def);
+  } else if (contains<5, Coord>(ship_state.s51, shot_attempt)) {
+    const ship_def = ShipDef { ship: SHIP.s51, ship_cell: ships.s51, ship_v: ships.v51 };
+    return get_shot_result<5>(shot_attempt, updated_ship_state.s51, player, ship_def);
+  } else {
+    return ShotResult {
+      cell: shot_attempt,
+      result: SHOT_RESULT.miss,
+      player: player,
+      ship_def: unknown_ship_def()
+    };
+  }
+}

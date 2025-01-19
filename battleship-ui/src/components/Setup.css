@@ -1,0 +1,8 @@
+.submit {
+    color: white !important;
+}
+
+.submit:disabled {
+    color: white !important;
+    opacity: 0.3;
+}

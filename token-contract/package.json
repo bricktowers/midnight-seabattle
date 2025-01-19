@@ -1,0 +1,30 @@
+{
+  "name": "@bricktowers/token-contract",
+  "type": "module",
+  "author": "Brick Towers",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "compact": "run-compactc src/token.compact ./src/managed/token",
+    "test": "jest",
+    "prepack": "yarn build",
+    "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/token.compact ./dist",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@midnight-ntwrk/compact": "workspace:*",
+    "eslint": "^8.52.0",
+    "jest": "^29.7.0",
+    "typescript": "^5.2.2"
+  }
+}
