@@ -245,7 +245,6 @@ Go to **Settings** → **Networks** → Change to **Undeployed**.
 
 * Copy your wallet address from Lace wallet
 * Paste it to
-  * [undeployed-wallet-load.test.ts](battleship-api/src/test/undeployed-wallet-load.test.ts)
   * [prepare-local-standalone-env.test.ts](battleship-api/src/test/prepare-local-standalone-env.test.ts)
 * Run the test:
 ```shell
