@@ -211,6 +211,13 @@ graph TD
 ```
 
 ## 🪛 Build
+
+### Prerequisites
+- [Midnight Compact compiler](https://docs.midnight.network/develop/tutorial/building/prereqs#midnight-compact-compiler)
+- [Node.js](https://nodejs.org/en/download/) (LTS/hydrogen)
+- [Yarn](https://yarnpkg.com/getting-started/install)
+- [Docker](https://docs.docker.com/get-docker/)- 
+
 ```
 yarn install
 npx turbo build
