@@ -36,7 +36,7 @@ Players take turns guessing the coordinates of their opponent's ships.
 
 ## 📜 Rules of the Game
 
-#### 🗺 Board Setup
+#### 🌊 Board Setup
 - The board consists of a **10x10 grid** with columns labeled **A-J** (Y-axis) and rows numbered **1-10** (X-axis).
 - To join a game, each player must contribute **100 Brick Towers Coins (tBTC)** to the prize pool. Tokens are freely available for collection on the game page.
 - Each player places **5 ships** on their board. The board layout is stored locally in the player's browser and is never shared with anyone.
@@ -70,7 +70,7 @@ Only the board setup differs, while gameplay and winning conditions remain the s
 
 > **Note:** This variant is implemented **only as contract code** and is **not exposed in the UI**.
 
-#### 🌏 Board Setup
+#### 🌊 Board Setup
 - The board consists of a **10x10 grid** (same as the Western variant).
 - Players place **10 ships** on their board:
   - 1 ship of length **4** (Battleship)
@@ -116,6 +116,8 @@ Ship placement rules:
 - 💡 **Store and validate state as witness**: A pattern that ensures that the state is only changed by the contract and is not tampered with by the player during the game.
 - 💡 **Overlap check**: Ensures that the board is setup according to the game rules.
 - 💡 **Adjacency check**: Advanced check for the Eastern variant to ensure that ships are not adjacent.
+- 💡 **Hit check**: Checks if the player hit a ship and updates the state accordingly.
+- 💡 **Sunk check**: Checks if the player has hit all the cells of a ship and thus has sunk it.
 - 💡 **End game check**: Checks that the game is over based on number of unique cell hits.
 - 💡 **Modularization**: Separate contract for each game variant with a shared library for common logic.
 - 💡 **Prize Money**: Locks the prize money at the beginning of the game, and sends it to the winner at the end of the game.
