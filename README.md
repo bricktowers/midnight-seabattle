@@ -105,6 +105,7 @@ Ship placement rules:
 - 💡 **State Recovery**: Improved state recovery mechanism for transient failures and browser reloads.
 - 💡 **Firebase**: Changes to the public game states on blockchain are published to Firebase. This ensures real-time updates of available games.
 - 💡 **Indexer**: Indexer is monitoring the blockchain using Midnight indexer and publishes information about relevant (Sea Battle) contracts to Firebase.
+- 💡 **Testing**: Comprehensive unit, integration and property-based tests for contract logic and API interactions.
 
 
 ## 📝 Contract Features

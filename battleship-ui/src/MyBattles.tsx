@@ -185,12 +185,7 @@ const MyBattles: React.FC<MyBattlesProps> = ({ logger }) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
 
-      <Typography
-        align="justify"
-        variant="body1"
-        color="cornsilk"
-        style={{ paddingRight: '100px', paddingLeft: '100px' }}
-      >
+      <Typography align="justify" variant="body1" color="cornsilk" sx={{ paddingRight: '10%', paddingLeft: '10%' }}>
         Welcome to Sea Battle by{' '}
         <Box
           component="a"
@@ -234,17 +229,13 @@ const MyBattles: React.FC<MyBattlesProps> = ({ logger }) => {
         , offering a trustworthy and engaging gaming experience.
       </Typography>
 
-      <Typography
-        align="justify"
-        variant="body1"
-        color="cornsilk"
-        style={{ paddingRight: '100px', paddingLeft: '100px' }}
-      >
+      <Typography align="justify" variant="body1" color="cornsilk" sx={{ paddingRight: '10%', paddingLeft: '10%' }}>
         To play a game you need a Midnight Lace Wallet with some tDUST and tBTC (Brick Tower Coin) tokens. See the{' '}
         <Box
+          onClick={onFAQ}
           component="a"
-          href="/faq"
           sx={{
+            cursor: 'pointer',
             color: 'cornsilk',
             textDecoration: 'underline',
           }}
