@@ -11,7 +11,7 @@ export const FAQ: React.FC = () => {
         <li style={{ marginBottom: '16px' }}>
           <strong>Q: What do I need to start playing?</strong>
           <p>
-            A: You need to have{' '}
+            A: You need to have a Chrome Browser with the {' '}
             <Box
               component="a"
               href="https://docs.midnight.network/develop/tutorial/using/chrome-ext"
@@ -22,7 +22,7 @@ export const FAQ: React.FC = () => {
                 textDecoration: 'underline',
               }}
             >
-              Midnight Lace Wallet installed
+              Midnight Lace Wallet plugin installed
             </Box>{' '}
             and set up with the proof server address. You can play the game in your browser without any additional
             installations. You need to have some tDUST tokens to in your wallet to sign the game transactions. You need
@@ -39,7 +39,7 @@ export const FAQ: React.FC = () => {
           </p>
         </li>
         <li style={{ marginBottom: '16px' }}>
-          <strong>Q: What to dow when I get &#34;UNKNOWN ERROR&#34; while trying to connect a wallet?</strong>
+          <strong>Q: What to do when I get &#34;UNKNOWN ERROR&#34; while trying to connect a wallet?</strong>
           <p>
             A: There are sometimes still intermittent errors in the test infrastructure. Double check if you have
             correctly set up the wallet and try reloading the page.

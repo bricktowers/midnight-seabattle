@@ -43,11 +43,10 @@ subsequent calls to fail, leading to a cascade of issues. To mitigate this, we
 implemented retry logic for calls to the indexer, ensuring greater resilience and
 reducing the impact of temporary disruptions.
 
-## Infrastructure instability
+## Infrastructure Instability
 Initially, our goal was to deliver a playable game with a smooth user experience.
 However, as we began testing our solution on the TestNet, we encountered significant
 performance challenges with the provided infrastructure.
-
 The long wait times for block finalization rendered the game unplayable.
 Due to limited documentation, we undertook the task of running the node
 and indexer ourselves to investigate the issues. This led to two key discoveries:
@@ -59,10 +58,10 @@ Unfortunately, there was nothing we could do to resolve it.
 **Indexer Challenges**: The indexer also presented problems, including excessive
 memory usage leading to crashes, single-CPU utilization, and extremely slow
 synchronization, taking days to sync with a node on the same machine.
+Also not much we can do without access to the source code.
 
 We are now eagerly awaiting updates and fixes from the Midnight team to continue
 our journey on the TestNet.
-
 
 ---
 # Observations and Feedback
