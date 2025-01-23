@@ -102,7 +102,7 @@ export const eastWitnesses = {
   set_player_ship_state: (
     { privateState }: WitnessContext<Ledger, BattleshipEastPrivateState>,
     playerShipState: ShipState,
-  ): [BattleshipEastPrivateState, void] => [{ ...privateState, playerShipState }, undefined],
+  ): [BattleshipEastPrivateState, []] => [{ ...privateState, playerShipState }, []],
 };
 
 export function getEastOccupiedCells(ships: Ships): Coord[] {

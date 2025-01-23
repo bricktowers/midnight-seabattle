@@ -22,31 +22,31 @@ export { SHIP }
 export { ShipDef }
 export { public_key }
 
-export ledger game_state: Cell<GAME_STATE>;              // tracks the current game state according to the game state machine
-export ledger shot_attempt: Cell<Coord>;                 // coordinate of the opponent's shot to be validated during the player's turn
-export ledger last_shot_result: Cell<Maybe<ShotResult>>; // validated shot result
-export sealed ledger reward_coin_color: Cell<Bytes<32>>; // identifier of the coins used for rewards
-export ledger reward: Cell<QualifiedCoinInfo>;           // reference to the funds locked in the contract
+export ledger game_state: GAME_STATE;              // tracks the current game state according to the game state machine
+export ledger shot_attempt: Coord;                 // coordinate of the opponent's shot to be validated during the player's turn
+export ledger last_shot_result: Maybe<ShotResult>; // validated shot result
+export sealed ledger reward_coin_color: Bytes<32>; // identifier of the coins used for rewards
+export ledger reward: QualifiedCoinInfo;           // reference to the funds locked in the contract
 
 // Player 1 public state
-export ledger p1: Cell<Maybe<Bytes<32>>>;                     // hash of player 1 secret, used to uniquely identify the player
-export ledger p1_public_key: Cell<Maybe<ZswapCoinPublicKey>>; // public key of player 1, where to send the reward
-export ledger p1_ship_positions_hash: Cell<Bytes<32>>;        // hash of player's board layout, to ensure that it is not changed
-export ledger p1_ship_state_hash: Cell<Bytes<32>>;            // hash of player's ships current state, to ensure it is not changed between turns
+export ledger p1: Maybe<Bytes<32>>;                     // hash of player 1 secret, used to uniquely identify the player
+export ledger p1_public_key: Maybe<ZswapCoinPublicKey>; // public key of player 1, where to send the reward
+export ledger p1_ship_positions_hash: Bytes<32>;        // hash of player's board layout, to ensure that it is not changed
+export ledger p1_ship_state_hash: Bytes<32>;            // hash of player's ships current state, to ensure it is not changed between turns
 export ledger p1_hit_counter: Counter;                        // counter of hits on player's ships to determine the winner
 
 // Player 2 public state
-export ledger p2: Cell<Maybe<Bytes<32>>>;
-export ledger p2_public_key: Cell<Maybe<ZswapCoinPublicKey>>;
-export ledger p2_ship_positions_hash: Cell<Bytes<32>>;
-export ledger p2_ship_state_hash: Cell<Bytes<32>>;
+export ledger p2: Maybe<Bytes<32>>;
+export ledger p2_public_key: Maybe<ZswapCoinPublicKey>;
+export ledger p2_ship_positions_hash: Bytes<32>;
+export ledger p2_ship_state_hash: Bytes<32>;
 export ledger p2_hit_counter: Counter;
 
 // Private data provided by each player
 witness local_secret_key(): Bytes<32>;                      // player's secret key used for identifying the player and hashing the game state
 witness player_ship_positions(): Ships;                     // ships placement as set by the player at the beginning of the game
 witness player_ship_state(): ShipState;                     // current state of the player's ships, which ships are hit or sunk
-witness set_player_ship_state(ship_state: ShipState): Void; // used by the contract to update the player's current ship state
+witness set_player_ship_state(ship_state: ShipState): []; // used by the contract to update the player's current ship state
 
 // Used to calculate and pass around the shot result during the player's turn
 export struct IntermediateShotResult {
@@ -84,7 +84,7 @@ constructor(token_address: ContractAddress) {
   reward_coin_color = token_type(pad(32, "brick_towers_coin"), token_address);
 }
 
-export circuit join_p1(coin: CoinInfo): Void {
+export circuit join_p1(coin: CoinInfo): [] {
   assert game_state == GAME_STATE.waiting_p1 "Attempted to join a game that is not waiting for player 1";
   assert !p1.is_some "Already in the game";
   const sk = local_secret_key();
@@ -93,7 +93,7 @@ export circuit join_p1(coin: CoinInfo): Void {
   // to use for hashing in each game to avoid matching hashes if a player uses the same board state in several games
   const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
   const me = public_key(sk);
-  p1 = some<Bytes<32>>(me);
+  p1 = disclose(some<Bytes<32>>(me));
 
   // Validate and add the reward coin to the contract
   receive(coin);
@@ -114,7 +114,7 @@ export circuit join_p1(coin: CoinInfo): Void {
   game_state = GAME_STATE.waiting_p2;
 }
 
-export circuit join_p2(coin: CoinInfo): Void {
+export circuit join_p2(coin: CoinInfo): [] {
   assert game_state == GAME_STATE.waiting_p2 "Attempted to join a game that is not waiting for player 2";
   assert !p2.is_some "Already in the game";
   const sk = local_secret_key();
@@ -122,7 +122,7 @@ export circuit join_p2(coin: CoinInfo): Void {
   const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
   const me = public_key(sk);
   assert p1.value != me "Already in the game";
-  p2 = some<Bytes<32>>(me);
+  p2 = disclose(some<Bytes<32>>(me));
 
   receive(coin);
   assert coin.value == 100 "Game requires 100 coins";
@@ -139,7 +139,7 @@ export circuit join_p2(coin: CoinInfo): Void {
   game_state = GAME_STATE.p1_turn;
 }
 
-export circuit turn_player1(value: Coord): Void {
+export circuit turn_player1(value: Coord): [] {
   assert game_state == GAME_STATE.p1_turn "It is not 1st player's turn";
 
   const sk = local_secret_key();
@@ -168,7 +168,7 @@ export circuit turn_player1(value: Coord): Void {
   game_state = check_winner(GAME_STATE.p2_turn);
 }
 
-export circuit turn_player2(value: Coord): Void {
+export circuit turn_player2(value: Coord): [] {
   assert game_state == GAME_STATE.p2_turn "It is not 2nd player's turn";
 
   const sk = local_secret_key();
@@ -193,9 +193,9 @@ export circuit turn_player2(value: Coord): Void {
 }
 
 // Validated that the player has placed their ships correctly
-pure circuit assert_valid_ship_position(ship_positions: Ships): Void {
+pure circuit assert_valid_ship_position(ship_positions: Ships): [] {
   const cells = occupied_cells(ship_positions);
-  for cell in cells do {
+  for (const cell of cells) {
     assert_valid_coordinate(cell);
   }
   assert unique_vector(cells) "Ship cells must be unique";
@@ -304,7 +304,7 @@ export pure circuit calculate_shot_result(
     s51: update_hit_cell_state<5>(ship_state.s51, shot_attempt)
   };
   return IntermediateShotResult {
-    calculate_shot_result(shot_attempt, ship_state, updated_ship_state, ships, player),
+    disclose(calculate_shot_result(shot_attempt, ship_state, updated_ship_state, ships, player)),
     updated_ship_state
   };
 }

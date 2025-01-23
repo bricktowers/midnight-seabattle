@@ -168,5 +168,5 @@ export const westWitnesses = {
   set_player_ship_state: (
     { privateState }: WitnessContext<Ledger, BattleshipPrivateState>,
     playerShipState: ShipState,
-  ): [BattleshipPrivateState, void] => [{ ...privateState, playerShipState }, undefined],
+  ): [BattleshipPrivateState, []] => [{ ...privateState, playerShipState }, []],
 };

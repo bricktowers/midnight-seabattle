@@ -5,14 +5,14 @@ import CompactStandardLibrary;
 export { CoinInfo };
 
 export ledger counter: Counter;
-export ledger nonce: Cell<Bytes<32>>;
-export ledger tvl: Cell<Uint<64>>;
+export ledger nonce: Bytes<32>;
+export ledger tvl: Uint<64>;
 
 constructor(initNonce: Bytes<32>) {
   nonce = initNonce;
 }
 
-export circuit mint(): Void {
+export circuit mint(): [] {
   counter.increment(1);
   const newNonce = evolve_nonce(counter, nonce);
   const amount = 1000;
