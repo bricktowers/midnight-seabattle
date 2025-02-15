@@ -12,24 +12,24 @@ export { SHIP }
 export { ShipDef }
 export { public_key }
 
-export ledger game_state: Cell<GAME_STATE>;
-export ledger shot_attempt: Cell<Coord>; // coordinate of the opponent's shot
-export ledger last_shot_result: Cell<Maybe<ShotResult>>; // validated shot result
+export ledger game_state: GAME_STATE;
+export ledger shot_attempt: Coord; // coordinate of the opponent's shot
+export ledger last_shot_result: Maybe<ShotResult>; // validated shot result
 
-export ledger p1: Cell<Maybe<Bytes<32>>>; // hash of player 1 secret
-export ledger p1_ship_positions_hash: Cell<Bytes<32>>;
-export ledger p1_ship_state_hash: Cell<Bytes<32>>;
+export ledger p1: Maybe<Bytes<32>>; // hash of player 1 secret
+export ledger p1_ship_positions_hash: Bytes<32>;
+export ledger p1_ship_state_hash: Bytes<32>;
 export ledger p1_hit_counter: Counter;
 
-export ledger p2: Cell<Maybe<Bytes<32>>>; // hash of player 12secret
-export ledger p2_ship_positions_hash: Cell<Bytes<32>>;
-export ledger p2_ship_state_hash: Cell<Bytes<32>>;
+export ledger p2: Maybe<Bytes<32>>; // hash of player 12secret
+export ledger p2_ship_positions_hash: Bytes<32>;
+export ledger p2_ship_state_hash: Bytes<32>;
 export ledger p2_hit_counter: Counter;
 
 witness local_secret_key(): Bytes<32>;
 witness player_ship_positions(): Ships; // ships placement
 witness player_ship_state(): ShipState; // ship game state, i.e. which cell of ships are hit
-witness set_player_ship_state(ship_state: ShipState): Void;
+witness set_player_ship_state(ship_state: ShipState): [];
 
 export struct IntermediateShotResult {
   shot_result: ShotResult;
@@ -75,14 +75,14 @@ constructor() {
   game_state = GAME_STATE.waiting_p1;
 }
 
-export circuit join_p1(): Void {
+export circuit join_p1(): [] {
   assert game_state == GAME_STATE.waiting_p1 "Attempted to join a game that is not waiting for player 1";
   assert !p1.is_some "Already in the game";
   const sk = local_secret_key();
   // we hash the secret key and the contract address to get a unique hash for the state for each game
   const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
   const me = public_key(sk);
-  p1 = some<Bytes<32>>(me);
+  p1 = disclose(some<Bytes<32>>(me));
 
   const ship_positions = player_ship_positions();
   const cells = occupied_cells(ship_positions);
@@ -106,7 +106,7 @@ export circuit join_p1(): Void {
   game_state = GAME_STATE.waiting_p2;
 }
 
-export circuit join_p2(): Void {
+export circuit join_p2(): [] {
   assert game_state == GAME_STATE.waiting_p2 "Attempted to join a game that is not waiting for player 2";
   assert !p2.is_some "Already in the game";
   const sk = local_secret_key();
@@ -115,7 +115,7 @@ export circuit join_p2(): Void {
   const me = public_key(sk);
 
   assert p1.value != me "Already in the game";
-  p2 = some<Bytes<32>>(me);
+  p2 = disclose(some<Bytes<32>>(me));
 
   const ship_positions = player_ship_positions();
   const cells = occupied_cells(ship_positions);
@@ -139,7 +139,7 @@ export circuit join_p2(): Void {
   game_state = GAME_STATE.p1_turn;
 }
 
-export circuit turn_player1(value: Coord): Void {
+export circuit turn_player1(value: Coord): [] {
   assert game_state == GAME_STATE.p1_turn "It is not 1st player's turn";
 
   const sk = local_secret_key();
@@ -163,7 +163,7 @@ export circuit turn_player1(value: Coord): Void {
   game_state = check_winner(GAME_STATE.p2_turn);
 }
 
-export circuit turn_player2(value: Coord): Void {
+export circuit turn_player2(value: Coord): [] {
   assert game_state == GAME_STATE.p2_turn "It is not 2nd player's turn";
 
   const sk = local_secret_key();
@@ -187,8 +187,8 @@ export circuit turn_player2(value: Coord): Void {
   game_state = check_winner(GAME_STATE.p1_turn);
 }
 
-pure circuit assert_valid_ship_position(ship_positions: Ships, cells: Vector<20, Coord>): Void {
-  for cell in cells do {
+pure circuit assert_valid_ship_position(ship_positions: Ships, cells: Vector<20, Coord>): [] {
+  for (const cell of cells) {
     assert_valid_coordinate(cell);
   }
   assert unique_vector(cells) "Ship cells must be unique";
@@ -301,7 +301,7 @@ export pure circuit calculate_shot_result(
     s41: update_hit_cell_state<4>(ship_state.s41, shot_attempt)
   };
   return IntermediateShotResult {
-    calculate_shot_result(shot_attempt, ship_state, updated_ship_state, ships, player),
+    disclose(calculate_shot_result(shot_attempt, ship_state, updated_ship_state, ships, player)),
     updated_ship_state
   };
 }
@@ -341,42 +341,42 @@ pure circuit calculate_shot_result(
   }
 }
 
-pure circuit assert_no_adjacent_ship(cell: Coord, ship: Coord): Void {
+pure circuit assert_no_adjacent_ship(cell: Coord, ship: Coord): [] {
     assert (cell == ship) == false "Ships can't be adjacent";
 }
 
-pure circuit assert_neighbour_is_not_1ship(neighbours: Vector<8, Coord>, coords: Vector<20, Coord>): Void {
-  for neighbour in neighbours do {
+pure circuit assert_neighbour_is_not_1ship(neighbours: Vector<8, Coord>, coords: Vector<20, Coord>): [] {
+  for (const neighbour of neighbours) {
     assert_neighbour_is_not_ship(neighbour, coords);
   }
 }
 
-pure circuit assert_no_adjacent_neighbour_for_2ship(neighbours: Vector<10, Coord>, coords: Vector<20, Coord>): Void {
-  for neighbour in neighbours do {
+pure circuit assert_no_adjacent_neighbour_for_2ship(neighbours: Vector<10, Coord>, coords: Vector<20, Coord>): [] {
+  for (const neighbour of neighbours) {
     assert_neighbour_is_not_ship(neighbour, coords);
   }
 }
 
-pure circuit assert_no_adjacent_neighbour_for_3ship(neighbours: Vector<12, Coord>, coords: Vector<20, Coord>): Void {
-  for neighbour in neighbours do {
+pure circuit assert_no_adjacent_neighbour_for_3ship(neighbours: Vector<12, Coord>, coords: Vector<20, Coord>): [] {
+  for (const neighbour of neighbours) {
     assert_neighbour_is_not_ship(neighbour, coords);
   }
 }
 
-pure circuit assert_no_adjacent_neighbour_for_4ship(neighbours: Vector<14, Coord>, coords: Vector<20, Coord>): Void {
-  for neighbour in neighbours do {
+pure circuit assert_no_adjacent_neighbour_for_4ship(neighbours: Vector<14, Coord>, coords: Vector<20, Coord>): [] {
+  for (const neighbour of neighbours) {
     assert_neighbour_is_not_ship(neighbour, coords);
   }
 }
 
-pure circuit assert_no_adjacent_neighbour_for_5ship(neighbours: Vector<16, Coord>, coords: Vector<20, Coord>): Void {
-  for neighbour in neighbours do {
+pure circuit assert_no_adjacent_neighbour_for_5ship(neighbours: Vector<16, Coord>, coords: Vector<20, Coord>): [] {
+  for (const neighbour of neighbours) {
     assert_neighbour_is_not_ship(neighbour, coords);
   }
 }
 
-pure circuit assert_neighbour_is_not_ship(neighbour: Coord, coords: Vector<20, Coord>): Void {
-  for coord in coords do {
+pure circuit assert_neighbour_is_not_ship(neighbour: Coord, coords: Vector<20, Coord>): [] {
+  for (const coord of coords) {
     assert_no_adjacent_ship(neighbour, coord);
   }
 }

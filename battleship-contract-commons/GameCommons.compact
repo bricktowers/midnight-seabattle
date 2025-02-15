@@ -86,7 +86,7 @@ module GameCommons {
     return persistent_hash<Vector<2, Bytes<32>>>([pad(32, "battleship:pk:"), sk]);
   }
 
-  export pure circuit assert_valid_coordinate(cell: Coord): Void {
+  export pure circuit assert_valid_coordinate(cell: Coord): [] {
     assert cell.x != 0 "Ship is out of the board";
     assert cell.x < 11 "Ship is out of the board";
     assert cell.y != 0 "Ship is out of the board";
