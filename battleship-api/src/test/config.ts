@@ -54,9 +54,9 @@ export class TestnetRemoteConfig implements Config {
   );
 
   tokenZkConfigPath = path.resolve(currentDir, '..', '..', '..', 'token-contract', 'dist', 'managed', 'token');
-  indexer = 'https://indexer.testnet.midnight.network/api/v1/graphql';
-  indexerWS = 'wss://indexer.testnet.midnight.network/api/v1/graphql/ws';
-  node = 'https://rpc.testnet.midnight.network';
+  indexer = 'https://indexer.testnet-02.midnight.network/api/v1/graphql';
+  indexerWS = 'wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws';
+  node = 'https://rpc.testnet-02.midnight.network';
   proofServer = 'http://127.0.0.1:6300';
 
   constructor() {
