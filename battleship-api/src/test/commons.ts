@@ -30,7 +30,7 @@ import { inMemoryPrivateStateProvider } from './in-memory-private-state-provider
 import { type Contract, type Witnesses } from '@bricktowers/token-contract';
 import type { FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
 
-export const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000000000000000000042';
+export const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000000000000000000001';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface BrickTowersCoinPrivateState {}

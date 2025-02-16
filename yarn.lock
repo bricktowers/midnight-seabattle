@@ -2286,21 +2286,21 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@midnight-ntwrk/dapp-connector-api@npm:^1.2.2":
-  version: 1.2.2
-  resolution: "@midnight-ntwrk/dapp-connector-api@npm:1.2.2"
+"@midnight-ntwrk/dapp-connector-api@npm:^1.2.3":
+  version: 1.2.3
+  resolution: "@midnight-ntwrk/dapp-connector-api@npm:1.2.3"
   dependencies:
     "@midnight-ntwrk/wallet-api": "npm:^3.4.2"
     "@midnight-ntwrk/zswap": "npm:^3.0.2"
     ts-custom-error: "npm:^3.3.1"
-  checksum: 10/b498792ec313b4daa5832b36a211f8d80c66e4b777d1ef1f98c3d7b3344f2552622ae06138f4029fd6cede97cb7c3004abf14bc0679d8cc684d8f6403bcbec2d
+  checksum: 10/2ecc68a486fa535b42361ba89e1703485ed25c533ee4e312bcd16bde83e990ad37c4f928f08531954da172a9773d0561473154c4feb034915779a491f8816ce0
   languageName: node
   linkType: hard
 
-"@midnight-ntwrk/ledger@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "@midnight-ntwrk/ledger@npm:3.0.2"
-  checksum: 10/86eef902781a2b1add6f2c43eb57599be9cbf21ecef8010cf954b981ccb9004fe78c5b14f8785e9fb964f4ec11a0d4ea6868052cf6c602b5b8cf5e43e2f984d9
+"@midnight-ntwrk/ledger@npm:^3.0.6":
+  version: 3.0.6
+  resolution: "@midnight-ntwrk/ledger@npm:3.0.6"
+  checksum: 10/644fac9ea7b47c8d0c8ea437e18e2362746701e2fedba3f6fa9a08dcea1f283c05336d9def60403e72055baa5a1e841f971a858ae3133b577a3f12518a48c753
   languageName: node
   linkType: hard
 
@@ -2405,10 +2405,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@midnight-ntwrk/onchain-runtime@npm:^0.2.2":
-  version: 0.2.2
-  resolution: "@midnight-ntwrk/onchain-runtime@npm:0.2.2"
-  checksum: 10/aca7b5a83e4ff2bc40cd439a36322454a8ace033be034da1b36a4e4dbff44693dda3515a1980107e0bd4d0de0838588f59462c9749df3d60b64a8af841b22432
+"@midnight-ntwrk/onchain-runtime@npm:^0.2.5":
+  version: 0.2.5
+  resolution: "@midnight-ntwrk/onchain-runtime@npm:0.2.5"
+  checksum: 10/4ffa90d4326818d8104b87fd4d57131ee7d02d41e9d39e1c32e2bb97aa739c5ccb354463732574776dea9cf905fd76bea54b6015167975f9e26638df515d47ed
   languageName: node
   linkType: hard
 
@@ -2434,25 +2434,25 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@midnight-ntwrk/wallet@npm:^3.7.3":
-  version: 3.7.3
-  resolution: "@midnight-ntwrk/wallet@npm:3.7.3"
+"@midnight-ntwrk/wallet@npm:^3.7.5":
+  version: 3.7.5
+  resolution: "@midnight-ntwrk/wallet@npm:3.7.5"
   dependencies:
     "@midnight-ntwrk/wallet-api": "npm:^3.5.0"
-    "@midnight-ntwrk/zswap": "npm:^3.0.2"
+    "@midnight-ntwrk/zswap": "npm:^3.0.6"
     isomorphic-ws: "npm:^5.0.0"
     node-fetch: "npm:3.3.2"
     rxjs: "npm:^7.5"
     scale-ts: "npm:^1.1.0"
     ws: "npm:^8.8.1"
-  checksum: 10/c2a598f80a77a17dd3dd5b973efda7bf4087332b1dd7310956ccdfe6a2a10fff680731ad8cf5f9c00feda973d103a7186c5b69ed159b17f40ff13ef305907440
+  checksum: 10/60f57e17dc84cd980d22f6842cd82e4d1c02af20c5435833e2d8ab57559b89ac22e2fa5028f4a9d0d9da76bfcd2aa24efa2d87eef047967bbecb2c4772b9c3a0
   languageName: node
   linkType: hard
 
-"@midnight-ntwrk/zswap@npm:^3.0.2":
-  version: 3.0.2
-  resolution: "@midnight-ntwrk/zswap@npm:3.0.2"
-  checksum: 10/7390752550dedebde40ddc5e1dd04c6d86988e3f5e8a11d7ece010590723675ad7f4e2e071cf589e7cb6e15da1de1548f70f29016c974c6d00096224351f6648
+"@midnight-ntwrk/zswap@npm:^3.0.6":
+  version: 3.0.6
+  resolution: "@midnight-ntwrk/zswap@npm:3.0.6"
+  checksum: 10/d095b9380d1ca9f0f94286ce31bd8aaee0ee6458d8681d5b021198c1125e9e9276ebf7bd6ca5221c800ec1d8ed27909faf866268e3673d36a5126c2c9b99b595
   languageName: node
   linkType: hard
 
@@ -10623,8 +10623,8 @@ __metadata:
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
     "@midnight-ntwrk/compact-runtime": "npm:^0.7.0"
-    "@midnight-ntwrk/dapp-connector-api": "npm:^1.2.2"
-    "@midnight-ntwrk/ledger": "npm:^3.0.2"
+    "@midnight-ntwrk/dapp-connector-api": "npm:^1.2.3"
+    "@midnight-ntwrk/ledger": "npm:^3.0.6"
     "@midnight-ntwrk/midnight-js-contracts": "npm:0.2.5"
     "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "npm:0.2.5"
     "@midnight-ntwrk/midnight-js-http-client-proof-provider": "npm:0.2.5"
@@ -10634,7 +10634,7 @@ __metadata:
     "@midnight-ntwrk/midnight-js-node-zk-config-provider": "npm:0.2.5"
     "@midnight-ntwrk/midnight-js-types": "npm:0.2.5"
     "@midnight-ntwrk/midnight-js-utils": "npm:0.2.5"
-    "@midnight-ntwrk/wallet": "npm:^3.7.3"
+    "@midnight-ntwrk/wallet": "npm:^3.7.5"
     "@midnight-ntwrk/wallet-api": "npm:^3.5.0"
     "@types/jest": "npm:^29.5.6"
     "@types/node": "npm:^18.18.6"
