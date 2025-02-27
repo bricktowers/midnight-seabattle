@@ -18,7 +18,7 @@
     "battleship-ui": "turbo run start --filter=battleship-ui"
   },
   "resolutions": {
-    "@midnight-ntwrk/compact-runtime/@midnight-ntwrk/onchain-runtime": "^0.2.5",
+    "@midnight-ntwrk/compact-runtime/@midnight-ntwrk/onchain-runtime": "^0.2.6",
     "@midnight-ntwrk/zswap": "^3.0.6"
   },
   "dependencies": {

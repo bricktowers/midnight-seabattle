@@ -2405,10 +2405,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@midnight-ntwrk/onchain-runtime@npm:^0.2.5":
-  version: 0.2.5
-  resolution: "@midnight-ntwrk/onchain-runtime@npm:0.2.5"
-  checksum: 10/4ffa90d4326818d8104b87fd4d57131ee7d02d41e9d39e1c32e2bb97aa739c5ccb354463732574776dea9cf905fd76bea54b6015167975f9e26638df515d47ed
+"@midnight-ntwrk/onchain-runtime@npm:^0.2.6":
+  version: 0.2.6
+  resolution: "@midnight-ntwrk/onchain-runtime@npm:0.2.6"
+  checksum: 10/6c7bf8a6d9dfd4560f1da67a0b0a2a89331eecb8110b07f7d2eab1c311cadc8f5fc42e46118649766490e534b504c0e7cad94cfdcccdbb1b09d9f69877707ebd
   languageName: node
   linkType: hard
 
