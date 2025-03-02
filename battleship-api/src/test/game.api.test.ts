@@ -219,6 +219,7 @@ describe('Game', () => {
     const testConfiguration = await testEnvironment.start();
     wallet = await testEnvironment.getWallet1();
     wallet2 = await testEnvironment.getWallet2();
+    logger.info('Wallets created');
     providers1 = await new TestProviders().configureBattleshipProviders(wallet, testConfiguration.dappConfig);
     providers2 = await new TestProviders().configureBattleshipProviders(wallet2, testConfiguration.dappConfig);
     const tokenProvider1 = await new TestProviders().configureBrickTowersTokenProviders(

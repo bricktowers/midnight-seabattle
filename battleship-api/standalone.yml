@@ -1,8 +1,7 @@
 services:
   proof-server:
     container_name: 'battleship-api-proof-server'
-    image: 'midnightnetwork/proof-server:3.0.2'
-    #command: ['midnight-proof-server --verbose']
+    image: 'midnightnetwork/proof-server:3.0.6'
     command: ['midnight-proof-server']
     ports:
       - "6300"
@@ -11,7 +10,7 @@ services:
       RUST_LOG: "trace,actix_web::middleware::logger=trace,actix_web=trace"
   indexer:
     container_name: 'battleship-api-indexer'
-    image: 'midnightnetwork/midnight-pubsub-indexer:2.2.1'
+    image: 'midnightnetwork/midnight-pubsub-indexer:2.3.0'
     platform: linux/amd64
     ports:
       - '0:8088'
@@ -30,7 +29,7 @@ services:
       node:
         condition: service_started
   node:
-    image: 'midnightnetwork/midnight-node:0.6.6-6288973b'
+    image: 'midnightnetwork/midnight-node:0.8.0'
     platform: linux/amd64
     container_name: 'battleship-api-node'
     ports:

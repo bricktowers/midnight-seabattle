@@ -1,7 +1,6 @@
 import { type Config, currentDir, StandaloneConfig } from './config';
 import {
   DockerComposeEnvironment,
-  GenericContainer,
   type StartedDockerComposeEnvironment,
   type StartedTestContainer,
   Wait,
@@ -30,7 +29,7 @@ import { inMemoryPrivateStateProvider } from './in-memory-private-state-provider
 import { type Contract, type Witnesses } from '@bricktowers/token-contract';
 import type { FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
 
-export const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000000000000000000042';
+export const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000000000000000000001';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface BrickTowersCoinPrivateState {}
@@ -119,14 +118,6 @@ export class TestEnvironment {
 
     return mappedUrl.toString().replace(/\/+$/, '');
   };
-
-  static getProofServerContainer = async (env: string = 'undeployed') =>
-    await new GenericContainer('ghcr.io/midnight-ntwrk/proof-server:3.0.2')
-      .withExposedPorts(6300)
-      .withCommand([`midnight-proof-server --network ${env}`])
-      .withEnvironment({ RUST_BACKTRACE: 'full' })
-      .withWaitStrategy(Wait.forLogMessage('Actix runtime found; starting in Actix runtime', 1))
-      .start();
 
   shutdown = async () => {
     if (this.testWallet1 !== undefined) {
