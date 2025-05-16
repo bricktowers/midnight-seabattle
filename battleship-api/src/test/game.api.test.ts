@@ -1,7 +1,7 @@
 import { GAME_STATE, getOccupiedCells, type Ships } from '@bricktowers/battleship-west-contract';
 import { type Resource } from '@midnight-ntwrk/wallet';
 import { type Wallet } from '@midnight-ntwrk/wallet-api';
-import { webcrypto } from 'crypto';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import path from 'path';
 import { BattleshipAPI, type BattleshipProviders, BOARD_STATE, emptyState } from '..';
 import { type BrickTowersCoinContract, type BrickTowersCoinProviders, TestEnvironment, TestProviders } from './commons';
@@ -15,9 +15,6 @@ import { type ContractAddress } from '@midnight-ntwrk/ledger';
 
 const logDir = path.resolve(currentDir, '..', 'logs', 'tests', `${new Date().toISOString()}.log`);
 const logger = await createLogger(logDir);
-
-// @ts-expect-error It is required
-globalThis.crypto = webcrypto;
 
 globalThis.WebSocket = WebSocket;
 
@@ -198,7 +195,7 @@ describe('Game', () => {
     const brickTowersCoinContract: BrickTowersCoinContract = new Contract({});
     await tokenProvider.privateStateProvider.set('coin2', {});
     const contractDeployed = await findDeployedContract(tokenProvider, {
-      privateStateKey: 'coin2',
+      privateStateId: 'coin2',
       contractAddress: tokenAddress,
       contract: brickTowersCoinContract,
     });
@@ -207,7 +204,7 @@ describe('Game', () => {
   async function deploy(tokenProvider: BrickTowersCoinProviders) {
     const brickTowersCoinContract: BrickTowersCoinContract = new Contract({});
     const deployedContract = await deployContract(tokenProvider, {
-      privateStateKey: 'coin',
+      privateStateId: 'coin',
       contract: brickTowersCoinContract,
       initialPrivateState: {},
       args: [randomBytes(32)],

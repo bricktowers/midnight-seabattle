@@ -7,10 +7,10 @@
   "FIREBASE_APP_ID": "1:563705422557:web:0e00364d9067850a433134",
   "FIREBASE_APPCHECK_RECAPTCHA_SITE_KEY": "6Lf8vS8qAAAAALsygygA5YFdm_lxPx5ei8wtmB-A",
   "FIREBASE_APPCHECK_RECAPTCHA_ENTERPRISE_SITE_KEY": "",
-  "BRICK_TOWERS_TOKEN_ADDRESS": "0200342cb118a1b4c71f6e502b51f830410d6114b9843dd4ed47c9a7d5ff367baae2",
+  "BRICK_TOWERS_TOKEN_ADDRESS": "020047ffd7aaa492b0175e7d87f92c81d4cb1189c29d3f705eb4fd6b768da145bceb",
   "LOGGING_LEVEL": "trace",
-  "NETWORK_ID": "Undeployed",
+  "NETWORK_ID": "TestNet",
   "PUBLIC_URL": "http://127.0.0.1:8080",
-  "INDEXER_URI":  "http://localhost:8088/api/v1/graphql",
-  "INDEXER_WS_URI": "ws://localhost:8088/api/v1/graphql/ws"
+  "INDEXER_URI":  "https://indexer.testnet-02.midnight.network/api/v1/graphql",
+  "INDEXER_WS_URI": "wss://indexer.testnet-02.midnight.network/api/v1/graphql/ws"
 }

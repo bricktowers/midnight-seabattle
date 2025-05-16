@@ -6,8 +6,8 @@ import {
   type BattleshipProviders,
   type DeployedBattleshipContract,
   emptyState,
-  type BattleshipPrivateStates,
   type UserAction,
+  type GameId,
 } from './common-types.js';
 import {
   type BattleshipPrivateState,
@@ -44,7 +44,7 @@ export interface DeployedBattleshipAPI {
 
 export class BattleshipAPI implements DeployedBattleshipAPI {
   private constructor(
-    public readonly gameId: string,
+    public readonly gameId: GameId,
     public readonly tokenContractAddress: ContractAddress,
     public readonly deployedContract: DeployedBattleshipContract,
     public readonly providers: BattleshipProviders,
@@ -86,17 +86,17 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
       (ledgerState, privateState, userActions) => {
         const whoami = pureCircuits.public_key(privateState.localSecretKey);
         const result: BattleshipDerivedState = {
-          state: ledgerState.gameState,
+          state: ledgerState.game_state,
           p1: ledgerState.p1.is_some ? toHex(ledgerState.p1.value) : undefined,
           p2: ledgerState.p2.is_some ? toHex(ledgerState.p2.value) : undefined,
           whoami: toHex(whoami),
-          shotAttempt: ledgerState.shotAttempt,
-          lastShotResult: ledgerState.lastShotResult.is_some
+          shotAttempt: ledgerState.shot_attempt,
+          lastShotResult: ledgerState.last_shot_result.is_some
             ? {
-                cell: ledgerState.lastShotResult.value.cell,
-                player: toHex(ledgerState.lastShotResult.value.player),
-                result: ledgerState.lastShotResult.value.result,
-                ship_def: ledgerState.lastShotResult.value.ship_def,
+                cell: ledgerState.last_shot_result.value.cell,
+                player: toHex(ledgerState.last_shot_result.value.player),
+                result: ledgerState.last_shot_result.value.result,
+                ship_def: ledgerState.last_shot_result.value.ship_def,
               }
             : undefined,
           privateShips: privateState.playerShipPositions,
@@ -225,7 +225,7 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
   }
 
   static async deploy(
-    gameId: string,
+    gameId: GameId,
     tokenContractAddress: string,
     providers: BattleshipProviders,
     logger: Logger,
@@ -236,7 +236,7 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
       },
     });
     const deployedGameContract = await deployContract(providers, {
-      privateStateKey: gameId,
+      privateStateId: gameId,
       contract: battleshipContract,
       initialPrivateState: await BattleshipAPI.getPrivateState(gameId, providers.privateStateProvider),
       args: [
@@ -273,7 +273,7 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
     const deployedGameContract = await findDeployedContract(providers, {
       contractAddress,
       contract: battleshipContract,
-      privateStateKey: gameId,
+      privateStateId: gameId,
       initialPrivateState: await BattleshipAPI.getPrivateState(gameId, providers.privateStateProvider),
     });
 
@@ -288,7 +288,7 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
   }
 
   static async getOrCreateInitialPrivateState(
-    privateStateProvider: PrivateStateProvider<BattleshipPrivateStates>,
+    privateStateProvider: PrivateStateProvider<GameId, BattleshipPrivateState>,
   ): Promise<BattleshipPrivateState> {
     let state = await privateStateProvider.get('initial');
     if (state === null) {
@@ -319,7 +319,7 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
 
   private static async getPrivateState(
     gameId: string,
-    providers: PrivateStateProvider<BattleshipPrivateStates>,
+    providers: PrivateStateProvider<GameId, BattleshipPrivateState>,
   ): Promise<BattleshipPrivateState> {
     const existingPrivateState = await providers.get(gameId);
     const initialState = await this.getOrCreateInitialPrivateState(providers);

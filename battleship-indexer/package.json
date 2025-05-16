@@ -4,9 +4,10 @@
   "author": "Brick Towers",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "scripts": {
     "copy-battleship-keys": "mkdir -p ./dist/keys && mkdir -p ./dist/zkir && cp -r ../battleship-west-contract/dist/managed/battleship_west/keys/* ./dist/keys && cp -r ../battleship-west-contract/dist/managed/battleship_west/zkir/* ./dist/zkir",
-    "build": "webpack --config webpack.config.js && yarn copy-battleship-keys",
+    "build": "tsc && vite build && yarn copy-battleship-keys",
     "serve": "node --enable-source-maps dist/bundle.js",
     "buildAndRestart": "yarn build && yarn serve"
   },
@@ -18,17 +19,23 @@
     "firebase": "^11.1.0",
     "firebase-admin": "^13.0.2",
     "graphql": "^16.10.0",
-    "graphql-ws": "^5.16.0"
+    "graphql-ws": "^5.16.0",
+    "ws": "^8.18.2"
   },
   "devDependencies": {
+    "@originjs/vite-plugin-commonjs": "1.0.3",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@types/ws": "^8",
     "eslint": "^8.52.0",
     "eslint-config-standard-with-typescript": "^39.1.1",
-    "jest": "^29.7.0",
+    "fast-check": "^3.23.2",
+    "http-server": "^14.1.1",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2",
-    "webpack": "^5.97.1",
-    "webpack-cli": "^6.0.1",
-    "webpack-node-externals": "^3.0.0"
+    "vite": "^5.4.11",
+    "vite-plugin-top-level-await": "^1.5.0",
+    "vite-plugin-wasm": "^3.4.1",
+    "vitest": "^3.2.1"
   }
 }

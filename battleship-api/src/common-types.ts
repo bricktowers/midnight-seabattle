@@ -12,15 +12,15 @@ import {
   type ShipDef,
 } from '@bricktowers/battleship-west-contract';
 
-export type BattleshipPrivateStates = Record<string, BattleshipPrivateState>;
+export type GameId = string;
 
 export type BattleshipContract = Contract<BattleshipPrivateState, Witnesses<BattleshipPrivateState>>;
 
 export type BattleshipCircuitKeys = Exclude<keyof BattleshipContract['impureCircuits'], number | symbol>;
 
-export type BattleshipProviders = MidnightProviders<BattleshipCircuitKeys, BattleshipPrivateStates>;
+export type BattleshipProviders = MidnightProviders<BattleshipCircuitKeys, GameId, BattleshipPrivateState>;
 
-export type DeployedBattleshipContract = FoundContract<BattleshipPrivateState, BattleshipContract>;
+export type DeployedBattleshipContract = FoundContract<BattleshipContract>;
 
 export type PlayerHit = {
   cell: Coord;

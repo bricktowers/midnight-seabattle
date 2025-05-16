@@ -81,26 +81,26 @@ export struct Ships {
 
 constructor(token_address: ContractAddress) {
   game_state = GAME_STATE.waiting_p1;
-  reward_coin_color = token_type(pad(32, "brick_towers_coin"), token_address);
+  reward_coin_color = tokenType(pad(32, "brick_towers_coin"), disclose(token_address));
 }
 
 export circuit join_p1(coin: CoinInfo): [] {
-  assert game_state == GAME_STATE.waiting_p1 "Attempted to join a game that is not waiting for player 1";
-  assert !p1.is_some "Already in the game";
+  assert (game_state == GAME_STATE.waiting_p1, "Attempted to join a game that is not waiting for player 1");
+  assert (!p1.is_some, "Already in the game");
   const sk = local_secret_key();
 
   // We hash the secret key with the unique contract address of each game to get a unique randomness
   // to use for hashing in each game to avoid matching hashes if a player uses the same board state in several games
-  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  const secret_key = persistentHash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
   const me = public_key(sk);
   p1 = disclose(some<Bytes<32>>(me));
 
   // Validate and add the reward coin to the contract
-  receive(coin);
-  assert coin.value == 100 "Game requires 100 coins";
-  assert coin.color == reward_coin_color "Invalid coin provided";
-  reward.write_coin(coin, right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
-  p1_public_key = some<ZswapCoinPublicKey>(own_public_key());
+  receive(disclose(coin));
+  assert (coin.value == 100, "Game requires 100 coins");
+  assert (coin.color == reward_coin_color, "Invalid coin provided");
+  reward.writeCoin(disclose(coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+  p1_public_key = some<ZswapCoinPublicKey>(ownPublicKey());
 
   // Validate the initial ship positions and compute the current state of the ships
   const ship_positions = player_ship_positions();
@@ -108,43 +108,43 @@ export circuit join_p1(coin: CoinInfo): [] {
   const ship_state = create_ship_state(ship_positions);
 
   // Hash the ship positions, so we can check that user did not change them in their private state later
-  p1_ship_positions_hash = persistent_commit<Ships>(ship_positions, secret_key);
-  p1_ship_state_hash = update_ship_state(ship_state, secret_key);
+  p1_ship_positions_hash = disclose(persistentCommit<Ships>(ship_positions, secret_key));
+  p1_ship_state_hash = disclose(update_ship_state(ship_state, secret_key));
 
   game_state = GAME_STATE.waiting_p2;
 }
 
 export circuit join_p2(coin: CoinInfo): [] {
-  assert game_state == GAME_STATE.waiting_p2 "Attempted to join a game that is not waiting for player 2";
-  assert !p2.is_some "Already in the game";
+  assert (game_state == GAME_STATE.waiting_p2, "Attempted to join a game that is not waiting for player 2");
+  assert (!p2.is_some, "Already in the game");
   const sk = local_secret_key();
 
-  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  const secret_key = persistentHash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
   const me = public_key(sk);
-  assert p1.value != me "Already in the game";
+  assert (p1.value != me, "Already in the game");
   p2 = disclose(some<Bytes<32>>(me));
 
-  receive(coin);
-  assert coin.value == 100 "Game requires 100 coins";
-  assert coin.color == reward_coin_color "Invalid coin provided";
-  reward.write_coin(merge_coin_immediate(reward, coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
-  p2_public_key = some<ZswapCoinPublicKey>(own_public_key());
+  receive(disclose(coin));
+  assert (coin.value == 100, "Game requires 100 coins");
+  assert (coin.color == reward_coin_color, "Invalid coin provided");
+  reward.writeCoin(mergeCoinImmediate(reward, disclose(coin)), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
+  p2_public_key = some<ZswapCoinPublicKey>(ownPublicKey());
 
   const ship_positions = player_ship_positions();
   assert_valid_ship_position(ship_positions);
   const ship_state = create_ship_state(ship_positions);
-  p2_ship_positions_hash = persistent_commit<Ships>(ship_positions, secret_key);
-  p2_ship_state_hash = update_ship_state(ship_state, secret_key);
+  p2_ship_positions_hash = disclose(persistentCommit<Ships>(ship_positions, secret_key));
+  p2_ship_state_hash = disclose(update_ship_state(ship_state, secret_key));
 
   game_state = GAME_STATE.p1_turn;
 }
 
 export circuit turn_player1(value: Coord): [] {
-  assert game_state == GAME_STATE.p1_turn "It is not 1st player's turn";
+  assert (game_state == GAME_STATE.p1_turn, "It is not 1st player's turn");
 
   const sk = local_secret_key();
-  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
-  assert p1.value == public_key(sk) "You are not the 1st player";
+  const secret_key = persistentHash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  assert (p1.value == public_key(sk), "You are not the 1st player");
 
   // Basic validation of the opponent's shot
   assert_valid_coordinate(value);
@@ -155,25 +155,25 @@ export circuit turn_player1(value: Coord): [] {
 
   // Calculate the shot result and update the ship state
   const result = calculate_shot_result(shot_attempt, ship_state, ships, p1.value);
-  p1_ship_state_hash = update_ship_state(result.updated_ship_state, secret_key);
+  p1_ship_state_hash = disclose(update_ship_state(result.updated_ship_state, secret_key));
   last_shot_result = some<ShotResult>(result.shot_result);
   if (result.shot_result.result != SHOT_RESULT.miss) {
     p1_hit_counter.increment(1);
   }
 
   // Store the shot attempt for the next player's turn
-  shot_attempt = value;
+  shot_attempt = disclose(value);
 
   // Finally check if this shot ended the game
   game_state = check_winner(GAME_STATE.p2_turn);
 }
 
 export circuit turn_player2(value: Coord): [] {
-  assert game_state == GAME_STATE.p2_turn "It is not 2nd player's turn";
+  assert (game_state == GAME_STATE.p2_turn, "It is not 2nd player's turn");
 
   const sk = local_secret_key();
-  const secret_key = persistent_hash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
-  assert p2.value == public_key(sk) "You are not the 2nd player";
+  const secret_key = persistentHash<Vector<2, Bytes<32>>>([sk, kernel.self().bytes]);
+  assert (p2.value == public_key(sk), "You are not the 2nd player");
 
   assert_valid_coordinate(value);
 
@@ -181,13 +181,13 @@ export circuit turn_player2(value: Coord): [] {
   const ship_state = get_ship_state(secret_key, p2_ship_state_hash);
 
   const result = calculate_shot_result(shot_attempt, ship_state, ships, p2.value);
-  p2_ship_state_hash = update_ship_state(result.updated_ship_state, secret_key);
+  p2_ship_state_hash = disclose(update_ship_state(result.updated_ship_state, secret_key));
   last_shot_result = some<ShotResult>(result.shot_result);
   if (result.shot_result.result != SHOT_RESULT.miss) {
     p2_hit_counter.increment(1);
   }
 
-  shot_attempt = value;
+  shot_attempt = disclose(value);
 
   game_state = check_winner(GAME_STATE.p1_turn);
 }
@@ -198,7 +198,7 @@ pure circuit assert_valid_ship_position(ship_positions: Ships): [] {
   for (const cell of cells) {
     assert_valid_coordinate(cell);
   }
-  assert unique_vector(cells) "Ship cells must be unique";
+  assert (unique_vector(cells), "Ship cells must be unique");
 }
 
 // Converts ship positions into a vector of all occupied coordinates
@@ -265,22 +265,22 @@ pure circuit create_ship_state(ships: Ships): ShipState {
 // Retrieves the current ship state from the player's private state and validates that it is unchanged
 circuit get_ship_state(sk: Bytes<32>, expected_state_hash: Bytes<32>): ShipState {
   const state = player_ship_state();
-  const state_hash = persistent_commit<ShipState>(state, sk);
-  assert state_hash == expected_state_hash "Ship state hash mismatch";
+  const state_hash = persistentCommit<ShipState>(state, sk);
+  assert (state_hash == expected_state_hash, "Ship state hash mismatch");
   return state;
 }
 
 // Retrieves the initial ship layout from the player's private state and validates that it is unchanged
 circuit get_ships(sk: Bytes<32>, expected_state_hash: Bytes<32>): Ships {
   const state = player_ship_positions();
-  const state_hash = persistent_commit<Ships>(state, sk);
-  assert state_hash == expected_state_hash "Ships hash mismatch";
+  const state_hash = persistentCommit<Ships>(state, sk);
+  assert (state_hash == expected_state_hash, "Ships hash mismatch");
   return state;
 }
 
 // Updates the ship state in the player's private state and returns the new state hash
 circuit update_ship_state(updated_ship_state: ShipState, sk: Bytes<32>): Bytes<32> {
-  const state_hash = persistent_commit<ShipState>(updated_ship_state, sk);
+  const state_hash = disclose(persistentCommit<ShipState>(updated_ship_state, sk));
   set_player_ship_state(updated_ship_state);
   return state_hash;
 }

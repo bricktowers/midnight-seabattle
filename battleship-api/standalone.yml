@@ -1,37 +1,36 @@
 services:
   proof-server:
     container_name: 'battleship-api-proof-server'
-    image: 'midnightnetwork/proof-server:3.0.2'
-    #command: ['midnight-proof-server --verbose']
-    command: ['midnight-proof-server']
+    image: "midnight-proof-server:prebaked"
+    command: [ "midnight-proof-server --network undeployed" ]
     ports:
       - "6300"
     environment:
+      NETWORK: ${NETWORK_ID:-undeployed}
+      EXTRA_ARGS: -v
       RUST_BACKTRACE: "full"
-      RUST_LOG: "trace,actix_web::middleware::logger=trace,actix_web=trace"
   indexer:
     container_name: 'battleship-api-indexer'
-    image: 'midnightnetwork/midnight-pubsub-indexer:2.2.1'
-    platform: linux/amd64
+    image: 'midnightntwrk/indexer-standalone:2.1.2'
     ports:
       - '0:8088'
-    command: ['-Dlogback.configurationFile=logback-json-file.xml']
     environment:
-      LOG_LEVEL: 'TRACE'
-      LEDGER_NETWORK_ID: 'Undeployed'
-      SUBSTRATE_NODE_WS_URL: 'ws://node:9944'
-      OTEL_JAVAAGENT_ENABLED: 'false'
+      RUST_LOG: "indexer=debug,chain_indexer=debug,indexer_api=debug,wallet_indexer=debug,indexer_common=debug,fastrace_opentelemetry=debug,debug"
+      # Random 32-byte hex-encoded secret used to make the standalone indexer run.
+      # Only needed to satisfy the config schema – not meant for secure use.
+      APP__INFRA__SECRET: "303132333435363738393031323334353637383930313233343536373839303132"
+      APP__INFRA__NODE__URL: "ws://node:9944"
     healthcheck:
-      test: ['CMD', 'egrep', '"Block .* was stored at height 0"', '/tmp/app_logs/server.log']
-      interval: 5s
+      test: ["CMD-SHELL", "cat /var/run/indexer-standalone/running"]
+      interval: 30s
       timeout: 5s
-      retries: 30
+      retries: 3
+      start_period: 10s
     depends_on:
       node:
         condition: service_started
   node:
-    image: 'midnightnetwork/midnight-node:0.6.6-6288973b'
-    platform: linux/amd64
+    image: 'midnightnetwork/midnight-node:0.12.0'
     container_name: 'battleship-api-node'
     ports:
       - "9944"

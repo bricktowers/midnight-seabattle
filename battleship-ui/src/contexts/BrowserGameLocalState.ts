@@ -12,6 +12,7 @@ export interface GameLocalState {
 export class BrowserGameLocalState implements GameLocalState {
   constructor(private readonly logger: Logger) {
     window.localStorage.removeItem('brick_towers_games');
+    window.localStorage.removeItem('brick_towers_games_testnet_02');
   }
 
   isLaceAutoConnect(): boolean {
@@ -25,15 +26,15 @@ export class BrowserGameLocalState implements GameLocalState {
 
   addGame(contract: string): void {
     this.logger.trace(`Adding game ${contract}`);
-    const item = window.localStorage.getItem('brick_towers_games_testnet_02');
+    const item = window.localStorage.getItem('brick_towers_games_testnet_022');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const games: string[] = item ? JSON.parse(item) : [];
     const updatedGames = Array.from(new Set([...games, contract]));
-    window.localStorage.setItem('brick_towers_games_testnet_02', JSON.stringify(updatedGames));
+    window.localStorage.setItem('brick_towers_games_testnet_022', JSON.stringify(updatedGames));
   }
 
   getGames(): string[] {
-    const item = window.localStorage.getItem('brick_towers_games_testnet_02');
+    const item = window.localStorage.getItem('brick_towers_games_testnet_022');
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const games: string[] = item ? JSON.parse(item) : [];
     return Array.from<string>(new Set([...games]));

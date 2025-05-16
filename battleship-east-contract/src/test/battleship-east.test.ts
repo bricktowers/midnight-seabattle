@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, test, expect } from 'vitest';
 import { BattleshipSimulator, randomSk } from './battleship-east-setup';
 import { Ships, GAME_STATE, getEastOccupiedCells, SHOT_RESULT, validateShips } from '../index';
 import * as fc from 'fast-check';
@@ -72,7 +72,7 @@ const validShipsArbitrary = shipsArbitrary.filter((ships: Ships) => validateShip
 function createGame() {
   const simulator = BattleshipSimulator.deployBattleshipContract(p1secretKey, player1Ships);
   const initialLS = simulator.getLedgerState();
-  expect(initialLS.gameState).toBe(GAME_STATE.waiting_p1);
+  expect(initialLS.game_state).toBe(GAME_STATE.waiting_p1);
 
   simulator.createPlayerPrivateState('p2', p2secretKey, player2Ships, undefined);
   return simulator;
@@ -97,10 +97,10 @@ describe('Valid Gameplay', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     const occupiedCells = new Set(getEastOccupiedCells(player2Ships).map((cell) => `${cell.x},${cell.y}`));
 
@@ -110,8 +110,8 @@ describe('Valid Gameplay', () => {
         if (occupiedCells.has(cellKey)) return;
         p1state = simulator.as('p1').turn_player1({ x: BigInt(x), y: BigInt(y) });
         p2state = simulator.as('p2').turn_player2({ x: 1n, y: 2n });
-        expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.miss);
-        expect(p1state.lastShotResult.value.result).toBe(SHOT_RESULT.miss);
+        expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.miss);
+        expect(p1state.last_shot_result.value.result).toBe(SHOT_RESULT.miss);
       }
     }
   });
@@ -122,10 +122,10 @@ describe('Player Turn Validation', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     const p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     expect(() => simulator.as('p2').turn_player2({ x: 1n, y: 1n })).toThrow("failed assert: It is not 2nd player's turn");
 
@@ -140,7 +140,7 @@ describe('Player Joining', () => {
     const simulator = createGame();
 
     const p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     expect(() => simulator.as('p1').join_p1()).toThrow(
       'failed assert: Attempted to join a game that is not waiting for player 1',
@@ -150,7 +150,7 @@ describe('Player Joining', () => {
     const simulator = createGame();
 
     const p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     expect(() => simulator.as('p1').join_p2()).toThrow('failed assert: Already in the game');
   });
@@ -160,10 +160,10 @@ describe('Player Role Validation', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     const p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     expect(() => simulator.as('p2').turn_player1({ x: 1n, y: 1n })).toThrow('failed assert: You are not the 1st player');
 

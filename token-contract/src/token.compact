@@ -9,14 +9,14 @@ export ledger nonce: Bytes<32>;
 export ledger tvl: Uint<64>;
 
 constructor(initNonce: Bytes<32>) {
-  nonce = initNonce;
+  nonce = disclose(initNonce);
 }
 
 export circuit mint(): [] {
   counter.increment(1);
-  const newNonce = evolve_nonce(counter, nonce);
+  const newNonce = evolveNonce(counter, nonce);
   const amount = 1000;
   tvl = tvl + amount as Uint<64>;
-  mint_token(pad(32, "brick_towers_coin"), amount, newNonce, left<ZswapCoinPublicKey, ContractAddress>(own_public_key()));
+  mintToken(pad(32, "brick_towers_coin"), amount, newNonce, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()));
   nonce = newNonce;
 }

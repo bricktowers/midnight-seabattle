@@ -14,7 +14,7 @@
     "buildAndRestart": "yarn build && yarn start",
     "preview": "vite preview",
     "lint": "eslint ./src",
-    "test": "jest --passWithNoTests"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@bricktowers/battleship-api": "workspace:*",
@@ -47,8 +47,10 @@
     "eslint-plugin-react": "^7.33.2",
     "fast-check": "^3.23.2",
     "http-server": "^14.1.1",
-    "jest": "^29.7.0",
     "typescript": "^5.2.2",
-    "vite": "^5.4.11"
+    "vite": "^5.4.11",
+    "vite-plugin-top-level-await": "^1.5.0",
+    "vite-plugin-wasm": "^3.4.1",
+    "vitest": "^3.2.1"
   }
 }

@@ -21,11 +21,10 @@ import { CachedFetchZkConfigProvider } from './zkConfigProvider';
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface BrickTowersCoinPrivateState {}
 
-type BrickTowersCoinPrivateStates = Record<string, BrickTowersCoinPrivateState>;
 type BrickTowersCoinContract = Contract<BrickTowersCoinPrivateState, Witnesses<BrickTowersCoinPrivateState>>;
 type BrickTowersCoinCircuitKeys = Exclude<keyof BrickTowersCoinContract['impureCircuits'], number | symbol>;
-type BrickTowersCoinProviders = MidnightProviders<BrickTowersCoinCircuitKeys, BrickTowersCoinPrivateStates>;
-type DeployedBrickTowersCoin = FoundContract<BrickTowersCoinPrivateState, BrickTowersCoinContract>;
+type BrickTowersCoinProviders = MidnightProviders<BrickTowersCoinCircuitKeys, string, BrickTowersCoinPrivateState>;
+type DeployedBrickTowersCoin = FoundContract<BrickTowersCoinContract>;
 
 function randomBytes(length: number): Uint8Array {
   const bytes = new Uint8Array(length);
@@ -46,7 +45,7 @@ const providers: (
   walletAPI: WalletAPI,
   callback: (action: ProviderCallbackAction) => void,
 ) => {
-  const privateStateProvider: PrivateStateProvider<BrickTowersCoinPrivateStates> = levelPrivateStateProvider({
+  const privateStateProvider: PrivateStateProvider<string, BrickTowersCoinPrivateState> = levelPrivateStateProvider({
     privateStateStoreName: 'bricktowerscoin-private-state',
   });
   const proofProvider: ProofProvider<BrickTowersCoinCircuitKeys> = proofClient(
@@ -94,7 +93,7 @@ export const MintButton: React.FC<MintButtonProps> = ({ logger, onMintTransactio
         );
         await midnightProviders.privateStateProvider.set('coin', {});
         const found = await findDeployedContract(midnightProviders, {
-          privateStateKey: 'coin',
+          privateStateId: 'coin',
           contractAddress: config.BRICK_TOWERS_TOKEN_ADDRESS,
           contract,
         });
@@ -127,7 +126,7 @@ export const MintButton: React.FC<MintButtonProps> = ({ logger, onMintTransactio
         );
         await midnightProviders.privateStateProvider.set('coin', {});
         const deployedContract: DeployedBrickTowersCoin = await deployContract(midnightProviders, {
-          privateStateKey: 'coin',
+          privateStateId: 'coin',
           contract,
           initialPrivateState: {},
           args: [randomBytes(32)],

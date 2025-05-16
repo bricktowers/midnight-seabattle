@@ -213,8 +213,8 @@ graph TD
 ## 🪛 Build
 
 ### Prerequisites
-- [Midnight Compact compiler](https://docs.midnight.network/develop/tutorial/building/prereqs#midnight-compact-compiler)
-- [Node.js](https://nodejs.org/en/download/) (LTS/hydrogen)
+- [Midnight Compact compiler 0.24.0](https://docs.midnight.network/relnotes/compact)
+- [Node.js](https://nodejs.org/en/download/) (LTS/jod)
 - [Yarn](https://yarnpkg.com/getting-started/install)
 - [Docker](https://docs.docker.com/get-docker/)
 
@@ -262,7 +262,3 @@ cd battleship-api
 yarn run prepare-local-env
 ```
 * Note deployed tBTC token contract and configure it as `BRICK_TOWERS_TOKEN_ADDRESS` in [config.json](battleship-ui/public/config.json)
-
-## ✍ Hackathon Notes
-The game was implemented as part of [Sea Battle Challenge Midnight Virtual Hackathon](https://midnight.brightidea.com/seabattle).
-The technical challenges we faced and workarounds implemented are described [here](docs/hackaton_notes.md).

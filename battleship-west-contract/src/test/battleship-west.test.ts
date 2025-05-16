@@ -1,4 +1,4 @@
-import { describe, expect, test } from '@jest/globals';
+import { describe, test, expect } from 'vitest';
 import { BattleshipSimulator, randomSk } from './battleship-west-setup';
 import { convertPartialShips, Coord, GAME_STATE, getOccupiedCells, SHIP, Ships, SHOT_RESULT, validateShips } from '../index.js';
 import * as fc from 'fast-check';
@@ -57,7 +57,7 @@ function expectOverlappingIsNotDetected(ships: Ships) {
 function createGame() {
   const simulator = BattleshipSimulator.deployBattleshipContract(p1secretKey, player1Ships);
   const initialLS = simulator.getLedgerState();
-  expect(initialLS.gameState).toBe(GAME_STATE.waiting_p1);
+  expect(initialLS.game_state).toBe(GAME_STATE.waiting_p1);
 
   simulator.createPlayerPrivateState('p2', p2secretKey, player2Ships, undefined);
   return simulator;
@@ -149,24 +149,24 @@ describe('Game Play', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 1n });
 
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
 
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.miss);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.miss);
 
     p1state = simulator.as('p1').turn_player1({ x: 2n, y: 2n });
     p2state = simulator.as('p2').turn_player2({ x: 5n, y: 9n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 2n, y: 3n });
     p2state = simulator.as('p2').turn_player2({ x: 5n, y: 10n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_sunk);
-    expect(p2state.lastShotResult.value.ship_def).toStrictEqual({ ship: SHIP.s21, ship_cell: { x: 2n, y: 2n }, ship_v: true });
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.ship_def).toStrictEqual({ ship: SHIP.s21, ship_cell: { x: 2n, y: 2n }, ship_v: true });
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 8n });
     p2state = simulator.as('p2').turn_player2({ x: 8n, y: 2n });
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 9n });
@@ -203,29 +203,29 @@ describe('Game Play', () => {
 
     p1state = simulator.as('p1').getLedgerState();
     p2state = simulator.as('p2').getLedgerState();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_wins);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_wins);
   });
   test('Player 2 wins the game quickly', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 1n });
 
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
 
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.miss);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.miss);
 
     p1state = simulator.as('p1').turn_player1({ x: 2n, y: 2n });
     p2state = simulator.as('p2').turn_player2({ x: 5n, y: 9n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 2n, y: 3n });
     p2state = simulator.as('p2').turn_player2({ x: 5n, y: 10n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 8n });
     p2state = simulator.as('p2').turn_player2({ x: 8n, y: 2n });
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 9n });
@@ -259,7 +259,7 @@ describe('Game Play', () => {
     p1state = simulator.as('p1').turn_player1({ x: 5n, y: 5n });
     p1state = simulator.as('p1').getLedgerState();
     p2state = simulator.as('p2').getLedgerState();
-    expect(p2state.gameState).toBe(GAME_STATE.p2_wins);
+    expect(p2state.game_state).toBe(GAME_STATE.p2_wins);
   });
 });
 
@@ -268,10 +268,10 @@ describe('Player Turn Validation', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     const p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     expect(() => simulator.as('p2').turn_player2({ x: 1n, y: 1n })).toThrow("failed assert: It is not 2nd player's turn");
 
@@ -324,7 +324,7 @@ describe('Player Joining', () => {
     const simulator = createGame();
 
     const p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     expect(() => simulator.as('p1').join_p1()).toThrow(
       'failed assert: Attempted to join a game that is not waiting for player 1',
@@ -334,7 +334,7 @@ describe('Player Joining', () => {
     const simulator = createGame();
 
     const p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     expect(() => simulator.as('p1').join_p2()).toThrow('failed assert: Already in the game');
   });
@@ -344,10 +344,10 @@ describe('Player Role Validation', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     const p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     expect(() => simulator.as('p2').turn_player1({ x: 1n, y: 1n })).toThrow('failed assert: You are not the 1st player');
 
@@ -362,110 +362,110 @@ describe('Ship Sinking', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 2n, y: 2n });
     p2state = simulator.as('p2').turn_player2({ x: 5n, y: 9n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 2n, y: 3n });
     p2state = simulator.as('p2').turn_player2({ x: 5n, y: 10n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_sunk);
-    expect(p2state.lastShotResult.value.ship_def).toStrictEqual({ ship: SHIP.s21, ship_cell: { x: 2n, y: 2n }, ship_v: true });
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.ship_def).toStrictEqual({ ship: SHIP.s21, ship_cell: { x: 2n, y: 2n }, ship_v: true });
   });
 
   test('Sink s31 ship', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 8n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 9n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 10n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_sunk);
-    expect(p2state.lastShotResult.value.ship_def).toStrictEqual({ ship: SHIP.s31, ship_cell: { x: 1n, y: 8n }, ship_v: true });
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.ship_def).toStrictEqual({ ship: SHIP.s31, ship_cell: { x: 1n, y: 8n }, ship_v: true });
   });
   test('Sink s32 ship', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 5n, y: 9n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 6n, y: 9n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 7n, y: 9n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_sunk);
-    expect(p2state.lastShotResult.value.ship_def).toStrictEqual({ ship: SHIP.s32, ship_cell: { x: 5n, y: 9n }, ship_v: false });
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.ship_def).toStrictEqual({ ship: SHIP.s32, ship_cell: { x: 5n, y: 9n }, ship_v: false });
   });
 
   test('Sink s41 ship', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 10n, y: 1n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 10n, y: 2n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 10n, y: 3n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 10n, y: 4n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_sunk);
-    expect(p2state.lastShotResult.value.ship_def).toStrictEqual({ ship: SHIP.s41, ship_cell: { x: 10n, y: 1n }, ship_v: true });
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.ship_def).toStrictEqual({ ship: SHIP.s41, ship_cell: { x: 10n, y: 1n }, ship_v: true });
   });
 
   test('Sink s51 ship', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 5n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 2n, y: 5n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 3n, y: 5n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 4n, y: 5n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_hit);
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_hit);
     p1state = simulator.as('p1').turn_player1({ x: 5n, y: 5n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-    expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.ship_sunk);
-    expect(p2state.lastShotResult.value.ship_def).toStrictEqual({ ship: SHIP.s51, ship_cell: { x: 1n, y: 5n }, ship_v: false });
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.ship_def).toStrictEqual({ ship: SHIP.s51, ship_cell: { x: 1n, y: 5n }, ship_v: false });
   });
 });
 
@@ -474,10 +474,10 @@ describe('Cheating Detection', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 1n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
@@ -500,10 +500,10 @@ describe('Cheating Detection', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 1n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
@@ -520,10 +520,10 @@ describe('Cheating Detection', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 1n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
@@ -545,10 +545,10 @@ describe('Cheating Detection', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     p1state = simulator.as('p1').turn_player1({ x: 1n, y: 1n });
     p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
@@ -580,10 +580,10 @@ describe('Valid Gameplay', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     const occupiedCells = new Set(getOccupiedCells(player2Ships).map((cell) => `${cell.x},${cell.y}`));
 
@@ -593,8 +593,8 @@ describe('Valid Gameplay', () => {
         if (occupiedCells.has(cellKey)) return;
         p1state = simulator.as('p1').turn_player1({ x: BigInt(x), y: BigInt(y) });
         p2state = simulator.as('p2').turn_player2({ x: 1n, y: 1n });
-        expect(p2state.lastShotResult.value.result).toBe(SHOT_RESULT.miss);
-        expect(p1state.lastShotResult.value.result).toBe(SHOT_RESULT.miss);
+        expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.miss);
+        expect(p1state.last_shot_result.value.result).toBe(SHOT_RESULT.miss);
       }
     }
   });
@@ -603,10 +603,10 @@ describe('Valid Gameplay', () => {
     const simulator = createGame();
 
     let p1state = simulator.as('p1').join_p1();
-    expect(p1state.gameState).toBe(GAME_STATE.waiting_p2);
+    expect(p1state.game_state).toBe(GAME_STATE.waiting_p2);
 
     let p2state = simulator.as('p2').join_p2();
-    expect(p2state.gameState).toBe(GAME_STATE.p1_turn);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_turn);
 
     expect(() => {
       p1state = simulator.as('p1').turn_player1({ x: 0n, y: 0n });
