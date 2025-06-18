@@ -1,4 +1,4 @@
-import { filter, firstValueFrom, mergeMap, Observable } from 'rxjs';
+import { filter, firstValueFrom, mergeMap, Observable, tap } from 'rxjs';
 import { type Config, type ContractStateUpdateBlock, type StreamElementData } from './common-types';
 import { gql } from 'graphql-tag';
 import { ApolloClient } from '@apollo/client/core/ApolloClient';
@@ -15,7 +15,7 @@ import type { GameContract } from '@bricktowers/battleship-api';
 import { utils } from '@bricktowers/battleship-api';
 import { ledger } from '@bricktowers/battleship-west-contract';
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
-import { tokenType } from '@midnight-ntwrk/ledger';
+import { type ContractState, tokenType } from '@midnight-ntwrk/ledger';
 import { encodeTokenType } from '@midnight-ntwrk/onchain-runtime';
 import { verifyContractState } from '@midnight-ntwrk/midnight-js-contracts';
 
@@ -23,17 +23,20 @@ export interface BattleshipStateStream {
   readonly contractUpdateStateStream: (blockHeight: number) => Observable<ContractStateUpdateBlock>;
 }
 
+type StateAddress = { state: ContractState; address: string };
+
 export class BattleshipStateStreamImpl implements BattleshipStateStream {
   provider: PublicDataProvider;
   client: ApolloClient<NormalizedCacheObject>;
   config: Config;
   verifierKeys: Array<['join_p1' | 'join_p2' | 'turn_player2' | 'turn_player1', VerifierKey]>;
+
   constructor(
     config: Config,
     verifierKeys: Array<['join_p1' | 'join_p2' | 'turn_player2' | 'turn_player1', VerifierKey]>,
   ) {
     setNetworkId(config.networkId as NetworkId);
-    this.provider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, WebSocket);
+    this.provider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, WebSocket as never);
     this.verifierKeys = verifierKeys;
     const wsLink = new GraphQLWsLink(
       createClient({
@@ -51,13 +54,13 @@ export class BattleshipStateStreamImpl implements BattleshipStateStream {
   }
 
   TXS_FROM_BLOCK_SUB = gql`
-    subscription TXS_FROM_BLOCK_SUB($offset: BlockOffsetInput) {
+    subscription TXS_FROM_BLOCK_SUB($offset: BlockOffset) {
       blocks(offset: $offset) {
         height
         hash
         transactions {
           hash
-          contractCalls {
+          contractActions {
             address
           }
         }
@@ -89,7 +92,7 @@ export class BattleshipStateStreamImpl implements BattleshipStateStream {
   contractCallDeployments = (streamElementData: StreamElementData) => {
     return streamElementData.blocks.transactions.flatMap(
       (transaction) =>
-        transaction.contractCalls
+        transaction.contractActions
           // .filter((contractCall) => contractCall.__typename === 'ContractDeploy') // here we could only take contract deployments
           .map((contractCall) => contractCall.address.substring(2)), // address includes network-id prefix which we need to remove
     );
@@ -105,12 +108,17 @@ export class BattleshipStateStreamImpl implements BattleshipStateStream {
   };
 
   toContractDeploymentBlock = async (streamElementData: StreamElementData) => {
-    const contractStateAddresses = await this.contractStates(this.contractCallDeployments(streamElementData));
+    let contractStateAddresses: StateAddress[] = [];
+    try {
+      contractStateAddresses = await this.contractStates(this.contractCallDeployments(streamElementData));
+    } catch (e) {
+      console.warn('Error fetching contract states for block height ' + streamElementData.blocks.height + ': ' + e);
+    }
     const gameContracts: GameContract[] = [];
     contractStateAddresses.forEach((contractStateAddress) => {
       try {
         const contractState = ledger(contractStateAddress.state.data);
-        const stateRewardCoinColor = toHex(contractState.rewardCoinColor);
+        const stateRewardCoinColor = toHex(contractState.reward_coin_color);
         const expectedRewardCoinColor = toHex(
           encodeTokenType(tokenType(utils.pad('brick_towers_coin', 32), this.config.rewardTokenAddress)),
         );
@@ -122,7 +130,7 @@ export class BattleshipStateStreamImpl implements BattleshipStateStream {
             address: contractStateAddress.address,
             p1,
             p2,
-            gameState: contractState.gameState,
+            gameState: contractState.game_state,
           });
         } else {
           console.warn(
@@ -151,6 +159,9 @@ export class BattleshipStateStreamImpl implements BattleshipStateStream {
 
   contractUpdateStateStream(blockHeight: number): Observable<ContractStateUpdateBlock> {
     return this.subscribeToBlocks(blockHeight).pipe(
+      // tap((element) => {
+      //   console.log('R eceived block:', JSON.stringify(element));
+      // }),
       filter((element) => element.data != null),
       map((element) => element.data as StreamElementData),
       mergeMap((element) => this.toContractDeploymentBlock(element)),

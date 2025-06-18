@@ -1,11 +1,8 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { Logger } from 'pino';
 import { type Address, type CoinPublicKey } from '@midnight-ntwrk/wallet-api/dist/types';
-import {
-  type BattleshipCircuitKeys,
-  type BattleshipPrivateStates,
-  type BattleshipProviders,
-} from '@bricktowers/battleship-api';
+import { type BattleshipCircuitKeys, type BattleshipProviders, type GameId } from '@bricktowers/battleship-api';
+import { type BattleshipPrivateState } from '@bricktowers/battleship-west-contract';
 import {
   type BalancedTransaction,
   createBalancedTx,
@@ -16,7 +13,7 @@ import {
 } from '@midnight-ntwrk/midnight-js-types';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
-import { type CoinInfo, Transaction, type TransactionId } from '@midnight-ntwrk/ledger';
+import { type CoinInfo, Transaction, type TransactionId, type EncPublicKey } from '@midnight-ntwrk/ledger';
 import { Transaction as ZswapTransaction } from '@midnight-ntwrk/zswap';
 import { getLedgerNetworkId, getZswapNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { useRuntimeConfiguration } from '../config/RuntimeConfiguration';
@@ -43,7 +40,7 @@ interface MidnightWalletState {
   address?: Address;
   widget?: React.ReactNode;
   walletAPI?: WalletAPI;
-  privateStateProvider: PrivateStateProvider<BattleshipPrivateStates>;
+  privateStateProvider: PrivateStateProvider<GameId, BattleshipPrivateState>;
   zkConfigProvider: ZKConfigProvider<BattleshipCircuitKeys>;
   proofProvider: ProofProvider<BattleshipCircuitKeys>;
   publicDataProvider: PublicDataProvider;
@@ -57,6 +54,7 @@ interface MidnightWalletState {
 export interface WalletAPI {
   wallet: DAppConnectorWalletAPI;
   coinPublicKey: CoinPublicKey;
+  encryptionPublicKey: EncPublicKey;
   uris: ServiceUriConfig;
 }
 
@@ -132,7 +130,7 @@ export const MidnightWalletProvider: React.FC<MidnightWalletProviderProps> = ({ 
     }, 3000);
   };
 
-  const privateStateProvider: PrivateStateProvider<BattleshipPrivateStates> = useMemo(
+  const privateStateProvider: PrivateStateProvider<GameId, BattleshipPrivateState> = useMemo(
     () =>
       new WrappedPrivateStateProvider(
         levelPrivateStateProvider({
@@ -208,6 +206,7 @@ export const MidnightWalletProvider: React.FC<MidnightWalletProviderProps> = ({ 
     if (walletAPI) {
       return {
         coinPublicKey: walletAPI.coinPublicKey,
+        encryptionPublicKey: walletAPI.encryptionPublicKey,
         balanceTx(tx: UnbalancedTransaction, newCoins: CoinInfo[]): Promise<BalancedTransaction> {
           providerCallback('balanceTxStarted');
           return walletAPI.wallet
@@ -225,6 +224,7 @@ export const MidnightWalletProvider: React.FC<MidnightWalletProviderProps> = ({ 
     } else {
       return {
         coinPublicKey: '',
+        encryptionPublicKey: '',
         balanceTx(tx: UnbalancedTransaction, newCoins: CoinInfo[]): Promise<BalancedTransaction> {
           return Promise.reject(new Error('readonly'));
         },
@@ -311,6 +311,7 @@ export const MidnightWalletProvider: React.FC<MidnightWalletProviderProps> = ({ 
       setWalletAPI({
         wallet: walletResult.wallet,
         coinPublicKey: reqState.coinPublicKey,
+        encryptionPublicKey: reqState.encryptionPublicKey,
         uris: walletResult.uris,
       });
     } catch (e) {

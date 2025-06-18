@@ -1,4 +1,4 @@
-import { webcrypto } from 'crypto';
+import { test, beforeAll, afterAll } from 'vitest';
 import path from 'path';
 import { currentDir } from './config';
 import { createLogger } from './logger-utils';
@@ -18,9 +18,6 @@ import { randomBytes } from '../utils';
 
 const logDir = path.resolve(currentDir, '..', 'logs', 'tests', `${new Date().toISOString()}.log`);
 const logger = await createLogger(logDir);
-
-// @ts-expect-error It is required
-globalThis.crypto = webcrypto;
 
 globalThis.WebSocket = WebSocket;
 
@@ -57,7 +54,7 @@ async function sendNativeToken(address: string, amount: bigint): Promise<string>
 async function deployBrickTowersCoinContract(tokenProvider: BrickTowersCoinProviders) {
   const brickTowersCoinContract: BrickTowersCoinContract = new Contract({});
   const deployedContract = await deployContract(tokenProvider, {
-    privateStateKey: 'coin',
+    privateStateId: 'coin',
     contract: brickTowersCoinContract,
     initialPrivateState: {},
     args: [randomBytes(32)],
@@ -68,12 +65,7 @@ async function deployBrickTowersCoinContract(tokenProvider: BrickTowersCoinProvi
 test('prepare local env', async () => {
   // fund my wallets
   await sendNativeToken(
-    '61827006f7a94be899b6c082fa562dea091a2c7b16c20995f2d0aea090265885|03009783460a73d913de64525ad88f51d627446e0d8304b4e75f806c554b31918b90518922d4aebd9efab1ded30891ea8aab24774db4f796aa1e',
-    10000000000n,
-  );
-
-  await sendNativeToken(
-    '82c96644c820c00b0dea3b61d24d1098cddd9ebfc8da439d74d78712c18c5660|030015f11ca8e8b66e8aead29974c43d34c778b3df5baa8b805f51e7d7c1e71d20b691a7787fc33d9f2199bcc5913f57877e4dfc5340c38c0806',
+    'mn_shield-addr_undeployed1025szwprcq8xyp7c3zmaqw9s6ven2jfdhsuuc5v6rv4x86swhl2qxq98905jzxdemzap89w8uka8rnjm8t7dsl5tpehwme22zh7se52j8qthdhd7',
     10000000000n,
   );
 

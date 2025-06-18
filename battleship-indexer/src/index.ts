@@ -1,4 +1,4 @@
-import { concatMap, from, mergeMap, retry } from 'rxjs';
+import { catchError, concatMap, from, mergeMap, retry, throwError } from 'rxjs';
 import { type Config } from './common-types';
 import { type BattleshipStateStream, BattleshipStateStreamImpl } from './battleship-state-stream';
 import { FirestoreStorage, type IndexStorage } from './storage';
@@ -6,13 +6,15 @@ import type { BattleshipContract } from '@bricktowers/battleship-api';
 import { Contract, westWitnesses } from '@bricktowers/battleship-west-contract';
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import type { VerifierKey } from '@midnight-ntwrk/midnight-js-types';
-import { getImpureCircuitIds } from '@midnight-ntwrk/midnight-js-contracts';
+
+type MyCircuits = 'join_p1' | 'join_p2' | 'turn_player2' | 'turn_player1';
 
 async function runIndex(config: Config, storage: IndexStorage) {
   const battleshipContract: BattleshipContract = new Contract(westWitnesses);
-  const zkConfigProvider = new NodeZkConfigProvider<'join_p1' | 'join_p2' | 'turn_player2' | 'turn_player1'>('dist/');
-  const verifierKeys: Array<['join_p1' | 'join_p2' | 'turn_player2' | 'turn_player1', VerifierKey]> =
-    await zkConfigProvider.getVerifierKeys(getImpureCircuitIds(battleshipContract));
+  const zkConfigProvider = new NodeZkConfigProvider<MyCircuits>('dist/');
+  const verifierKeys: Array<[MyCircuits, VerifierKey]> = await zkConfigProvider.getVerifierKeys(
+    Object.keys(battleshipContract.impureCircuits) as MyCircuits[],
+  );
 
   const battleshipStateStream: BattleshipStateStream = new BattleshipStateStreamImpl(config, verifierKeys);
 
@@ -21,6 +23,10 @@ async function runIndex(config: Config, storage: IndexStorage) {
       const blockHeight = blockHeightOpt ?? 0;
       console.log('Starting from block height:', blockHeight);
       return battleshipStateStream.contractUpdateStateStream(blockHeight);
+    }),
+    catchError((err, caught) => {
+      console.error('Stream encountered an error before retry:', err);
+      return throwError(() => err); // rethrow to trigger retry
     }),
     retry({
       count: 10,
@@ -54,12 +60,12 @@ const main = (): void => {
     console.log('Starting Battleship Indexer');
 
     const config: Config = {
-      indexerUri: process.env.INDEXER_URI ?? 'http://localhost:8088/api/v1/graphql',
-      indexerWsUri: process.env.INDEXER_WS_URI ?? 'ws://localhost:8088/api/v1/graphql/ws',
-      projectId: process.env.PROJECT_ID ?? 'btow-playground',
-      networkId: process.env.NETWORK_ID ?? 'Undeployed',
+      indexerUri: process.env.INDEXER_URI ?? 'https://indexer-rs.testnet-02.midnight.network/api/v1/graphql',
+      indexerWsUri: process.env.INDEXER_WS_URI ?? 'wss://indexer-rs.testnet-02.midnight.network/api/v1/graphql/ws',
+      projectId: process.env.PROJECT_ID ?? 'btow-dev-midnight',
+      networkId: process.env.NETWORK_ID ?? 'TestNet',
       rewardTokenAddress:
-        process.env.REWARD_TOKEN_ADDRESS ?? '02008ecdaec43a0ef46e888cc3a59d8fb524eba66f942c41d3add165de34df364b53',
+        process.env.REWARD_TOKEN_ADDRESS ?? '0200e2f48cf74e64894297105ad968385d637cf4b6228042ea89a89452a497da3cf0',
     };
 
     console.log('Config', config);

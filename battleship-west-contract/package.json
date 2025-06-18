@@ -16,7 +16,7 @@
   "scripts": {
     "compact_west": "run-compactc src/battleship_west.compact ./src/managed/battleship_west",
     "compact": "yarn compact_west",
-    "test": "jest",
+    "test": "vitest run",
     "prepack": "yarn build",
     "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/battleship_west.compact ./dist",
     "lint": "eslint src",
@@ -25,7 +25,7 @@
   "devDependencies": {
     "@midnight-ntwrk/compact": "workspace:*",
     "eslint": "^8.52.0",
-    "jest": "^29.7.0",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitest": "^3.2.1"
   }
 }

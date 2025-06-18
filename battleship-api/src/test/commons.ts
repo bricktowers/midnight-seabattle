@@ -21,7 +21,6 @@ import {
   type WalletProvider,
 } from '@midnight-ntwrk/midnight-js-types';
 import { Transaction as ZswapTransaction } from '@midnight-ntwrk/zswap';
-import type { BattleshipPrivateStates } from '../common-types';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import { NodeZkConfigProvider } from '@midnight-ntwrk/midnight-js-node-zk-config-provider';
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
@@ -29,16 +28,22 @@ import { getLedgerNetworkId, getZswapNetworkId } from '@midnight-ntwrk/midnight-
 import { inMemoryPrivateStateProvider } from './in-memory-private-state-provider';
 import { type Contract, type Witnesses } from '@bricktowers/token-contract';
 import type { FoundContract } from '@midnight-ntwrk/midnight-js-contracts';
+import { type BattleshipPrivateState } from '@bricktowers/battleship-west-contract';
+import { expect } from 'vitest';
 
-export const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000000000000000000042';
+export const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000000000000000000001';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 interface BrickTowersCoinPrivateState {}
 type BrickTowersCoinPrivateStates = Record<string, BrickTowersCoinPrivateState>;
 type BrickTowersCoinCircuitKeys = Exclude<keyof BrickTowersCoinContract['impureCircuits'], number | symbol>;
 export type BrickTowersCoinContract = Contract<BrickTowersCoinPrivateState, Witnesses<BrickTowersCoinPrivateState>>;
-export type BrickTowersCoinProviders = MidnightProviders<BrickTowersCoinCircuitKeys, BrickTowersCoinPrivateStates>;
-export type DeployedBrickTowersCoin = FoundContract<BrickTowersCoinPrivateState, BrickTowersCoinContract>;
+export type BrickTowersCoinProviders = MidnightProviders<
+  BrickTowersCoinCircuitKeys,
+  string,
+  BrickTowersCoinPrivateState
+>;
+export type DeployedBrickTowersCoin = FoundContract<BrickTowersCoinContract>;
 
 export interface TestConfiguration {
   seed: string;
@@ -82,7 +87,7 @@ export class TestEnvironment {
           'battleship-api-proof-server',
           Wait.forLogMessage('Actix runtime found; starting in Actix runtime', 1),
         )
-        .withWaitStrategy('battleship-api-indexer', Wait.forLogMessage(/Transactions subscription started/, 1))
+        .withWaitStrategy('battleship-api-indexer', Wait.forLogMessage(/starting indexing/, 1))
         .withWaitStrategy('battleship-api-node', Wait.forLogMessage(/Running JSON-RPC server/, 1));
       this.env = await this.dockerEnv.up();
 
@@ -178,17 +183,15 @@ export class TestWallet {
       wallet.state().pipe(
         Rx.throttleTime(10_000),
         Rx.tap((state) => {
-          const scanned = state.syncProgress?.synced ?? 0n;
-          const total = state.syncProgress?.total.toString() ?? 'unknown number';
+          const applyGap = state.syncProgress?.lag.applyGap ?? 0n;
+          const sourceGap = state.syncProgress?.lag.sourceGap ?? 0n;
           this.logger.info(
-            `Wallet scanned ${scanned} blocks out of ${total}, transactions=${state.transactionHistory.length}`,
+            `Waiting for funds. Backend lag: ${sourceGap}, wallet lag: ${applyGap}, transactions=${state.transactionHistory.length}`,
           );
         }),
         Rx.filter((state) => {
-          // Let's allow progress only if wallet is close enough
-          const synced = state.syncProgress?.synced ?? 0n;
-          const total = state.syncProgress?.total ?? 1_000n;
-          return total - synced < 100n;
+          // Let's allow progress only if wallet is synced
+          return state.syncProgress?.synced === true;
         }),
         Rx.map((s) => s.balances[nativeToken()] ?? 0n),
         Rx.filter((balance) => balance > 0n),
@@ -233,6 +236,7 @@ export class TestProviders {
   createWalletAndMidnightProvider = async (wallet: Wallet): Promise<WalletProvider & MidnightProvider> => {
     const state = await Rx.firstValueFrom(wallet.state());
     return {
+      encryptionPublicKey: state.encryptionPublicKey,
       coinPublicKey: state.coinPublicKey,
       balanceTx(tx: UnbalancedTransaction, newCoins: CoinInfo[]): Promise<BalancedTransaction> {
         return wallet
@@ -252,7 +256,7 @@ export class TestProviders {
 
   configureBattleshipProviders = async (wallet: Wallet & Resource, config: Config) => {
     const walletAndMidnightProvider = await this.createWalletAndMidnightProvider(wallet);
-    const inMemory = inMemoryPrivateStateProvider<BattleshipPrivateStates>();
+    const inMemory = inMemoryPrivateStateProvider<string, BattleshipPrivateState>();
     return {
       privateStateProvider: inMemory,
       publicDataProvider: indexerPublicDataProvider(config.indexer, config.indexerWS),
@@ -267,7 +271,7 @@ export class TestProviders {
 
   configureBrickTowersTokenProviders = async (wallet: Wallet & Resource, config: Config) => {
     const walletAndMidnightProvider = await this.createWalletAndMidnightProvider(wallet);
-    const inMemory = inMemoryPrivateStateProvider<BrickTowersCoinPrivateStates>();
+    const inMemory = inMemoryPrivateStateProvider<string, BrickTowersCoinPrivateStates>();
     return {
       privateStateProvider: inMemory,
       publicDataProvider: indexerPublicDataProvider(config.indexer, config.indexerWS),

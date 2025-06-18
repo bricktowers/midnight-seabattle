@@ -12,7 +12,7 @@ export type Config = {
 export type Transaction = {
   hash: string;
   identifiers: string[];
-  contractCalls: Array<{
+  contractActions: Array<{
     address: string;
     __typename: string;
   }>;
