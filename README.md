@@ -3,7 +3,7 @@
 Welcome to the **Sea Battle** by **Brick Towers** — a classic strategic and
 engaging game reimagined with [Midnight](https://midnight.network) blockchain
 [Zero Knowledge](https://en.wikipedia.org/wiki/Zero-knowledge_proof) (ZK) capabilities.
-This project demonstrates how Midnight's ZK features can ensure a fair game without sharing the secret information with a 3rd party.
+This project is built on the Midnight Network and it demonstrates how Midnight's ZK features can ensure a fair game without sharing the secret information with a 3rd party.
 
 ![Game snapshot](docs/seabattle.jpg)
 
