@@ -4,11 +4,12 @@ import type {
   ContractStateObservableConfig,
   FinalizedTxData,
   PublicDataProvider,
+  UnshieldedBalances,
 } from '@midnight-ntwrk/midnight-js-types';
 import type { Logger } from 'pino';
 import type { ContractAddress, ContractState } from '@midnight-ntwrk/compact-runtime';
 import { retryWithBackoff } from './retryWithBackoff';
-import type { TransactionId, ZswapChainState } from '@midnight-ntwrk/ledger';
+import type { LedgerParameters, TransactionId, ZswapChainState } from '@midnight-ntwrk/ledger-v8';
 import type { Observable } from 'rxjs';
 
 export class WrappedPublicDataProvider implements PublicDataProvider {
@@ -32,7 +33,7 @@ export class WrappedPublicDataProvider implements PublicDataProvider {
   queryZSwapAndContractState(
     contractAddress: ContractAddress,
     config?: BlockHeightConfig | BlockHashConfig,
-  ): Promise<[ZswapChainState, ContractState] | null> {
+  ): Promise<[ZswapChainState, ContractState, LedgerParameters] | null> {
     return retryWithBackoff(
       () => this.wrapped.queryZSwapAndContractState(contractAddress, config),
       'queryZSwapAndContractState',
@@ -48,12 +49,23 @@ export class WrappedPublicDataProvider implements PublicDataProvider {
     );
   }
 
+  queryUnshieldedBalances(
+    contractAddress: ContractAddress,
+    config?: BlockHeightConfig | BlockHashConfig,
+  ): Promise<UnshieldedBalances | null> {
+    return this.wrapped.queryUnshieldedBalances(contractAddress, config);
+  }
+
   watchForContractState(contractAddress: ContractAddress): Promise<ContractState> {
     return retryWithBackoff(
       () => this.wrapped.watchForContractState(contractAddress),
       'watchForContractState',
       this.logger,
     );
+  }
+
+  watchForUnshieldedBalances(contractAddress: ContractAddress): Promise<UnshieldedBalances> {
+    return this.wrapped.watchForUnshieldedBalances(contractAddress);
   }
 
   watchForDeployTxData(contractAddress: ContractAddress): Promise<FinalizedTxData> {
@@ -65,13 +77,12 @@ export class WrappedPublicDataProvider implements PublicDataProvider {
   }
 
   watchForTxData(txId: TransactionId): Promise<FinalizedTxData> {
-    // calling a callback is a workaround to show in the UI when the watchForTxData is called
     this.callback('watchForTxDataStarted');
     return retryWithBackoff(
       () => this.wrapped.watchForTxData(txId),
       'watchForTxDataStarted',
       this.logger,
-      1000, // we keep retrying long enough
+      1000,
     ).finally(() => {
       this.callback('watchForTxDataDone');
     });
@@ -79,5 +90,9 @@ export class WrappedPublicDataProvider implements PublicDataProvider {
 
   contractStateObservable(address: ContractAddress, config: ContractStateObservableConfig): Observable<ContractState> {
     return this.wrapped.contractStateObservable(address, config);
+  }
+
+  unshieldedBalancesObservable(address: ContractAddress, config: ContractStateObservableConfig): Observable<UnshieldedBalances> {
+    return this.wrapped.unshieldedBalancesObservable(address, config);
   }
 }

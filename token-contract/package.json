@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "compact": "run-compactc src/token.compact ./src/managed/token",
+    "compact": "compact compile src/token.compact ./src/managed/token",
     "test": "vitest run --passWithNoTests",
     "prepack": "yarn build",
     "build": "rm -rf dist && tsc --project tsconfig.build.json && cp -Rf ./src/managed ./dist/managed && cp ./src/token.compact ./dist",

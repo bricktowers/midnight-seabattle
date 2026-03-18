@@ -9,7 +9,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "prepare-local-env": "RUN_STANDALONE='true' NODE_OPTIONS=--experimental-vm-modules jest -t 'prepare local env' --detectOpenHandles --forceExit",
+    "prepare-local-env": "RUN_STANDALONE='true' vitest run prepare-local-standalone-env.test.ts",
     "test": "yarn test-api",
     "test-api": "vitest run",
     "build": "rm -rf dist && tsc --project tsconfig.build.json",

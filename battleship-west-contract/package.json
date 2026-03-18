@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "compact_west": "run-compactc src/battleship_west.compact ./src/managed/battleship_west",
+    "compact_west": "compact compile src/battleship_west.compact ./src/managed/battleship_west",
     "compact": "yarn compact_west",
     "test": "vitest run",
     "prepack": "yarn build",

@@ -1,5 +1,5 @@
 import type { GameContract } from '@bricktowers/battleship-api';
-import type { ContractState } from '@midnight-ntwrk/ledger';
+import type { ContractState } from '@midnight-ntwrk/ledger-v8';
 
 export type Config = {
   indexerUri: string;

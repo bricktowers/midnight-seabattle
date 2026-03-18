@@ -1,36 +1,32 @@
 services:
   proof-server:
     container_name: 'battleship-api-proof-server'
-    image: 'midnightnetwork/proof-server:3.0.2'
+    image: 'midnightntwrk/proof-server:8.0.3'
     ports:
       - "6300:6300"
-    environment:
-      RUST_BACKTRACE: "full"
-      RUST_LOG: "trace,actix_web::middleware::logger=trace,actix_web=trace"
+
   indexer:
     container_name: 'battleship-api-indexer'
-    image: 'midnightnetwork/midnight-pubsub-indexer:2.2.1'
-    platform: linux/amd64
+    image: 'midnightntwrk/indexer-standalone:4.0.0'
     ports:
       - '8088:8088'
-    command: ['-Dlogback.configurationFile=logback-json-file.xml']
     environment:
-      LOG_LEVEL: 'TRACE'
-      LEDGER_NETWORK_ID: 'Undeployed'
-      SUBSTRATE_NODE_WS_URL: 'ws://node:9944'
-      OTEL_JAVAAGENT_ENABLED: 'false'
+      RUST_LOG: "indexer=info,chain_indexer=info,indexer_api=info,wallet_indexer=info,indexer_common=info,fastrace_opentelemetry=info,info"
+      APP__INFRA__SECRET: "303132333435363738393031323334353637383930313233343536373839303132"
+      APP__INFRA__NODE__URL: "ws://node:9944"
     healthcheck:
-      test: ['CMD', 'egrep', '"Block .* was stored at height 0"', '/tmp/app_logs/server.log']
-      interval: 5s
-      timeout: 5s
-      retries: 30
+      test: ["CMD-SHELL", "cat /var/run/indexer-standalone/running"]
+      start_interval: "5s"
+      interval: "5s"
+      timeout: "2s"
+      retries: 2
+      start_period: 5s
     depends_on:
       node:
         condition: service_started
+
   node:
-    #image: 'midnightnetwork/midnight-node:0.6.3-69581601'
-    image: 'midnightnetwork/midnight-node:0.6.6-6288973b'
-    platform: linux/amd64
+    image: 'midnightntwrk/midnight-node:0.22.1'
     container_name: 'battleship-api-node'
     ports:
       - "9944:9944"
@@ -42,4 +38,4 @@ services:
       start_period: 40s
     environment:
       CFG_PRESET: "dev"
-
+      SIDECHAIN_BLOCK_BENEFICIARY: '04bcf7ad3be7a5c790460be82a713af570f22e0f801f6659ab8e84a52be6969e'

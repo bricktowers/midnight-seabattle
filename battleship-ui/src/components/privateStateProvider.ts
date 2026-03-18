@@ -1,5 +1,17 @@
 import { type SigningKey } from '@midnight-ntwrk/compact-runtime';
-import type { PrivateStateId, PrivateStateProvider } from '@midnight-ntwrk/midnight-js-types';
+import type {
+  ExportPrivateStatesOptions,
+  ExportSigningKeysOptions,
+  ImportPrivateStatesOptions,
+  ImportPrivateStatesResult,
+  ImportSigningKeysOptions,
+  ImportSigningKeysResult,
+  PrivateStateExport,
+  PrivateStateId,
+  PrivateStateProvider,
+  SigningKeyExport,
+} from '@midnight-ntwrk/midnight-js-types';
+import type { ContractAddress } from '@midnight-ntwrk/compact-runtime';
 import type { Logger } from 'pino';
 
 export class WrappedPrivateStateProvider<PSI extends PrivateStateId = PrivateStateId, PS = any>
@@ -9,6 +21,10 @@ export class WrappedPrivateStateProvider<PSI extends PrivateStateId = PrivateSta
     private readonly privateDataProvider: PrivateStateProvider<PSI, PS>,
     private readonly logger: Logger,
   ) {}
+
+  setContractAddress(address: ContractAddress): void {
+    return this.privateDataProvider.setContractAddress(address);
+  }
 
   set(key: PSI, state: PS): Promise<void> {
     this.logger.trace(`Setting private state for key: ${key}`);
@@ -30,17 +46,17 @@ export class WrappedPrivateStateProvider<PSI extends PrivateStateId = PrivateSta
     return this.privateDataProvider.clear();
   }
 
-  setSigningKey(key: PSI, signingKey: SigningKey): Promise<void> {
+  setSigningKey(key: ContractAddress, signingKey: SigningKey): Promise<void> {
     this.logger.trace(`Setting signing key for key: ${key}`);
     return this.privateDataProvider.setSigningKey(key, signingKey);
   }
 
-  getSigningKey(key: PSI): Promise<SigningKey | null> {
+  getSigningKey(key: ContractAddress): Promise<SigningKey | null> {
     this.logger.trace(`Getting signing key for key: ${key}`);
     return this.privateDataProvider.getSigningKey(key);
   }
 
-  removeSigningKey(key: PSI): Promise<void> {
+  removeSigningKey(key: ContractAddress): Promise<void> {
     this.logger.trace(`Removing signing key for key: ${key}`);
     return this.privateDataProvider.removeSigningKey(key);
   }
@@ -48,5 +64,21 @@ export class WrappedPrivateStateProvider<PSI extends PrivateStateId = PrivateSta
   clearSigningKeys(): Promise<void> {
     this.logger.trace('Clearing signing keys');
     return this.privateDataProvider.clearSigningKeys();
+  }
+
+  exportPrivateStates(options?: ExportPrivateStatesOptions): Promise<PrivateStateExport> {
+    return this.privateDataProvider.exportPrivateStates(options);
+  }
+
+  importPrivateStates(exportData: PrivateStateExport, options?: ImportPrivateStatesOptions): Promise<ImportPrivateStatesResult> {
+    return this.privateDataProvider.importPrivateStates(exportData, options);
+  }
+
+  exportSigningKeys(options?: ExportSigningKeysOptions): Promise<SigningKeyExport> {
+    return this.privateDataProvider.exportSigningKeys(options);
+  }
+
+  importSigningKeys(exportData: SigningKeyExport, options?: ImportSigningKeysOptions): Promise<ImportSigningKeysResult> {
+    return this.privateDataProvider.importSigningKeys(exportData, options);
   }
 }

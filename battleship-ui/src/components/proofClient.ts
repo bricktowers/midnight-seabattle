@@ -1,15 +1,17 @@
-import type { ProofProvider, UnbalancedTransaction } from '@midnight-ntwrk/midnight-js-types';
-import type { UnprovenTransaction } from '@midnight-ntwrk/ledger';
+import type { ProofProvider } from '@midnight-ntwrk/midnight-js-types';
+import type { UnprovenTransaction } from '@midnight-ntwrk/ledger-v8';
 import type { ProveTxConfig } from '@midnight-ntwrk/midnight-js-types/dist/proof-provider';
+import type { ZKConfigProvider } from '@midnight-ntwrk/midnight-js-types';
 import { httpClientProofProvider } from '@midnight-ntwrk/midnight-js-http-client-proof-provider';
 
 export const proofClient = <K extends string>(
   url: string,
+  zkConfigProvider: ZKConfigProvider<K>,
   callback: (status: 'proveTxStarted' | 'proveTxDone') => void,
-): ProofProvider<K> => {
-  const httpClientProvider = httpClientProofProvider(url.trim());
+): ProofProvider => {
+  const httpClientProvider = httpClientProofProvider(url.trim(), zkConfigProvider);
   return {
-    proveTx(tx: UnprovenTransaction, proveTxConfig?: ProveTxConfig<K>): Promise<UnbalancedTransaction> {
+    proveTx(tx: UnprovenTransaction, proveTxConfig?: ProveTxConfig): Promise<any> {
       // eslint-disable-next-line n/no-callback-literal
       callback('proveTxStarted');
       return httpClientProvider.proveTx(tx, proveTxConfig).finally(() => {
@@ -20,9 +22,9 @@ export const proofClient = <K extends string>(
   };
 };
 
-export const noopProofClient = <K extends string>(): ProofProvider<K> => {
+export const noopProofClient = (): ProofProvider => {
   return {
-    proveTx(tx: UnprovenTransaction, proveTxConfig?: ProveTxConfig<K>): Promise<UnbalancedTransaction> {
+    proveTx(_tx: UnprovenTransaction, _proveTxConfig?: ProveTxConfig): Promise<any> {
       return Promise.reject(new Error('Proof server not available'));
     },
   };

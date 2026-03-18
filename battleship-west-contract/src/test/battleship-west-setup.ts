@@ -1,26 +1,26 @@
 import {
-  CircuitContext,
-  CircuitResults,
-  constructorContext,
-  encodeContractAddress,
-  QueryContext,
+  type CircuitContext,
+  type CircuitResults,
+  createConstructorContext,
+  createCircuitContext,
   sampleContractAddress,
-  tokenType,
+  rawTokenType,
+  encodeRawTokenType,
+  encodeContractAddress,
 } from '@midnight-ntwrk/compact-runtime';
 import * as crypto from 'node:crypto';
 import {
-  BattleshipPrivateState,
+  type BattleshipPrivateState,
   westWitnesses,
   Contract,
-  Ledger,
+  type Ledger,
   ledger,
-  Witnesses,
-  Coord,
-  Ships,
-  ShipState,
-  CoinInfo,
+  type Witnesses,
+  type Coord,
+  type Ships,
+  type ShipState,
+  type ShieldedCoinInfo,
 } from '../index.js';
-import { ContractAddress, encodeTokenType } from '@midnight-ntwrk/onchain-runtime';
 
 type BattleshipContract = Contract<BattleshipPrivateState, Witnesses<BattleshipPrivateState>>;
 
@@ -41,23 +41,23 @@ export class BattleshipSimulator {
   readonly contract: BattleshipContract;
   userPrivateStates: Record<string, BattleshipPrivateState>;
   turnContext: CircuitContext<BattleshipPrivateState>;
-  contractAddress: ContractAddress;
+  contractAddress: ReturnType<typeof sampleContractAddress>;
   updateUserPrivateState: (newPrivateState: BattleshipPrivateState) => void;
 
   constructor(privateState: BattleshipPrivateState) {
     this.contract = new Contract(westWitnesses);
     this.contractAddress = sampleContractAddress();
     const { currentPrivateState, currentContractState, currentZswapLocalState } = this.contract.initialState(
-      constructorContext(privateState, '0'.repeat(64)),
+      createConstructorContext(privateState, '0'.repeat(64)),
       { bytes: encodeContractAddress(this.contractAddress) },
     );
     this.userPrivateStates = { ['p1']: currentPrivateState };
-    this.turnContext = {
-      currentPrivateState,
+    this.turnContext = createCircuitContext(
+      sampleContractAddress(),
       currentZswapLocalState,
-      originalState: currentContractState,
-      transactionContext: new QueryContext(currentContractState.data, sampleContractAddress()),
-    };
+      currentContractState,
+      currentPrivateState,
+    );
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     this.updateUserPrivateState = (newPrivateState: BattleshipPrivateState) => {};
   }
@@ -92,7 +92,7 @@ export class BattleshipSimulator {
   }
 
   getLedgerState(): Ledger {
-    return ledger(this.turnContext.transactionContext.state);
+    return ledger(this.turnContext.currentQueryContext.state);
   }
 
   getPrivateState(): BattleshipPrivateState {
@@ -117,10 +117,10 @@ export class BattleshipSimulator {
     return this.getLedgerState();
   }
 
-  coin(): CoinInfo {
+  coin(): ShieldedCoinInfo {
     return {
       nonce: randomSk(),
-      color: encodeTokenType(tokenType(pad('brick_towers_coin', 32), this.contractAddress)),
+      color: encodeRawTokenType(rawTokenType(pad('brick_towers_coin', 32), this.contractAddress)),
       value: BigInt(100),
     };
   }
@@ -129,7 +129,7 @@ export class BattleshipSimulator {
     return this.updateStateAndGetLedger(this.contract.impureCircuits.join_p1(this.turnContext, this.coin()));
   }
 
-  join_p1_with_coin(coinInfo: CoinInfo): Ledger {
+  join_p1_with_coin(coinInfo: ShieldedCoinInfo): Ledger {
     return this.updateStateAndGetLedger(this.contract.impureCircuits.join_p1(this.turnContext, coinInfo));
   }
 
@@ -137,7 +137,7 @@ export class BattleshipSimulator {
     return this.updateStateAndGetLedger(this.contract.impureCircuits.join_p2(this.turnContext, this.coin()));
   }
 
-  join_p2_with_coin(coinInfo: CoinInfo): Ledger {
+  join_p2_with_coin(coinInfo: ShieldedCoinInfo): Ledger {
     return this.updateStateAndGetLedger(this.contract.impureCircuits.join_p2(this.turnContext, coinInfo));
   }
 

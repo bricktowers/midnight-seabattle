@@ -6,7 +6,7 @@ import type { FetchResult, NormalizedCacheObject } from '@apollo/client';
 import type { PublicDataProvider, VerifierKey } from '@midnight-ntwrk/midnight-js-types';
 import { indexerPublicDataProvider } from '@midnight-ntwrk/midnight-js-indexer-public-data-provider';
 import WebSocket from 'ws';
-import { type NetworkId, setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
+import { setNetworkId } from '@midnight-ntwrk/midnight-js-network-id';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { createClient } from 'graphql-ws';
 import { InMemoryCache } from '@apollo/client/cache/inmemory/inMemoryCache';
@@ -15,8 +15,8 @@ import type { GameContract } from '@bricktowers/battleship-api';
 import { utils } from '@bricktowers/battleship-api';
 import { ledger } from '@bricktowers/battleship-west-contract';
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
-import { type ContractState, tokenType } from '@midnight-ntwrk/ledger';
-import { encodeTokenType } from '@midnight-ntwrk/onchain-runtime';
+import { type ContractState } from '@midnight-ntwrk/ledger-v8';
+import { rawTokenType, encodeRawTokenType } from '@midnight-ntwrk/compact-runtime';
 import { verifyContractState } from '@midnight-ntwrk/midnight-js-contracts';
 
 export interface BattleshipStateStream {
@@ -35,7 +35,7 @@ export class BattleshipStateStreamImpl implements BattleshipStateStream {
     config: Config,
     verifierKeys: Array<['join_p1' | 'join_p2' | 'turn_player2' | 'turn_player1', VerifierKey]>,
   ) {
-    setNetworkId(config.networkId as NetworkId);
+    setNetworkId(config.networkId as 'undeployed' | 'testnet');
     this.provider = indexerPublicDataProvider(config.indexerUri, config.indexerWsUri, WebSocket as never);
     this.verifierKeys = verifierKeys;
     const wsLink = new GraphQLWsLink(
@@ -120,7 +120,7 @@ export class BattleshipStateStreamImpl implements BattleshipStateStream {
         const contractState = ledger(contractStateAddress.state.data);
         const stateRewardCoinColor = toHex(contractState.reward_coin_color);
         const expectedRewardCoinColor = toHex(
-          encodeTokenType(tokenType(utils.pad('brick_towers_coin', 32), this.config.rewardTokenAddress)),
+          encodeRawTokenType(rawTokenType(utils.pad('brick_towers_coin', 32), this.config.rewardTokenAddress)),
         );
         verifyContractState(this.verifierKeys, contractStateAddress.state);
         if (stateRewardCoinColor === expectedRewardCoinColor) {

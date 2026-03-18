@@ -1,19 +1,9 @@
 import { WitnessContext } from '@midnight-ntwrk/compact-runtime';
-import type { Contract as ContractType, Witnesses } from './managed/battleship_west/contract/index.cjs';
-import ContractModule, { Coord, Ledger, Ships, ShipState } from './managed/battleship_west/contract/index.cjs';
+import { CompiledContract } from '@midnight-ntwrk/compact-js';
+import { Contract } from './managed/battleship_west/contract/index.js';
+import type { Witnesses, Coord, Ledger, Ships, ShipState } from './managed/battleship_west/contract/index.js';
 
-export * from './managed/battleship_west/contract/index.cjs';
-export const ledger = ContractModule.ledger;
-export const pureCircuits = ContractModule.pureCircuits;
-export const { Contract } = ContractModule;
-export type SHIP = ContractModule.SHIP;
-export type GAME_STATE = ContractModule.GAME_STATE;
-export type SHOT_RESULT = ContractModule.SHOT_RESULT;
-export const SHIP = ContractModule.SHIP;
-export const GAME_STATE = ContractModule.GAME_STATE;
-export const SHOT_RESULT = ContractModule.SHOT_RESULT;
-export type Maybe<T> = ContractModule.Maybe<T>;
-export type Contract<T, W extends Witnesses<T> = Witnesses<T>> = ContractType<T, W>;
+export * from './managed/battleship_west/contract/index.js';
 
 function ship2Cells(cell: Coord, vertical: boolean): [Coord, Coord] {
   if (vertical) {
@@ -170,3 +160,11 @@ export const westWitnesses = {
     playerShipState: ShipState,
   ): [BattleshipPrivateState, []] => [{ ...privateState, playerShipState }, []],
 };
+
+export const compiledBattleshipWestContract = CompiledContract.make<Contract<BattleshipPrivateState>>(
+  'battleship_west',
+  Contract,
+).pipe(
+  CompiledContract.withWitnesses(westWitnesses),
+  CompiledContract.withCompiledFileAssets('./managed/battleship_west'),
+);

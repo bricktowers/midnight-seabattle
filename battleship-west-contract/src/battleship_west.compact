@@ -13,7 +13,7 @@ import CompactStandardLibrary;
 import "../../battleship-contract-commons/GameCommons";
 
 export { Maybe }
-export { CoinInfo };
+export { ShieldedCoinInfo };
 export { GAME_STATE }
 export { SHOT_RESULT }
 export { ShotResult }
@@ -26,7 +26,7 @@ export ledger game_state: GAME_STATE;              // tracks the current game st
 export ledger shot_attempt: Coord;                 // coordinate of the opponent's shot to be validated during the player's turn
 export ledger last_shot_result: Maybe<ShotResult>; // validated shot result
 export sealed ledger reward_coin_color: Bytes<32>; // identifier of the coins used for rewards
-export ledger reward: QualifiedCoinInfo;           // reference to the funds locked in the contract
+export ledger reward: QualifiedShieldedCoinInfo;           // reference to the funds locked in the contract
 
 // Player 1 public state
 export ledger p1: Maybe<Bytes<32>>;                     // hash of player 1 secret, used to uniquely identify the player
@@ -84,7 +84,7 @@ constructor(token_address: ContractAddress) {
   reward_coin_color = tokenType(pad(32, "brick_towers_coin"), disclose(token_address));
 }
 
-export circuit join_p1(coin: CoinInfo): [] {
+export circuit join_p1(coin: ShieldedCoinInfo): [] {
   assert (game_state == GAME_STATE.waiting_p1, "Attempted to join a game that is not waiting for player 1");
   assert (!p1.is_some, "Already in the game");
   const sk = local_secret_key();
@@ -96,7 +96,7 @@ export circuit join_p1(coin: CoinInfo): [] {
   p1 = disclose(some<Bytes<32>>(me));
 
   // Validate and add the reward coin to the contract
-  receive(disclose(coin));
+  receiveShielded(disclose(coin));
   assert (coin.value == 100, "Game requires 100 coins");
   assert (coin.color == reward_coin_color, "Invalid coin provided");
   reward.writeCoin(disclose(coin), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
@@ -114,7 +114,7 @@ export circuit join_p1(coin: CoinInfo): [] {
   game_state = GAME_STATE.waiting_p2;
 }
 
-export circuit join_p2(coin: CoinInfo): [] {
+export circuit join_p2(coin: ShieldedCoinInfo): [] {
   assert (game_state == GAME_STATE.waiting_p2, "Attempted to join a game that is not waiting for player 2");
   assert (!p2.is_some, "Already in the game");
   const sk = local_secret_key();
@@ -124,7 +124,7 @@ export circuit join_p2(coin: CoinInfo): [] {
   assert (p1.value != me, "Already in the game");
   p2 = disclose(some<Bytes<32>>(me));
 
-  receive(disclose(coin));
+  receiveShielded(disclose(coin));
   assert (coin.value == 100, "Game requires 100 coins");
   assert (coin.color == reward_coin_color, "Invalid coin provided");
   reward.writeCoin(mergeCoinImmediate(reward, disclose(coin)), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));
@@ -241,10 +241,10 @@ pure circuit unique_vector(v: Vector<17, Coord>): Boolean {
 circuit check_winner(next: GAME_STATE): GAME_STATE {
   const cell_count = 17; // 5 + 4 + 3 + 3 + 2 cells of all ships
   if (p2_hit_counter == cell_count) {
-    send(reward, left<ZswapCoinPublicKey, ContractAddress>(p1_public_key.value), reward.value);
+    sendShielded(reward, left<ZswapCoinPublicKey, ContractAddress>(p1_public_key.value), reward.value);
     return GAME_STATE.p1_wins;
   } else if (p1_hit_counter == cell_count) {
-    send(reward, left<ZswapCoinPublicKey, ContractAddress>(p2_public_key.value), reward.value);
+    sendShielded(reward, left<ZswapCoinPublicKey, ContractAddress>(p2_public_key.value), reward.value);
     return GAME_STATE.p2_wins;
   } else {
     return next;

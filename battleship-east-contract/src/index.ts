@@ -1,23 +1,7 @@
-import {
-  Coord,
-  Ships,
-  ShipState,
-  ledger,
-  Ledger,
-  SHOT_RESULT,
-  GAME_STATE,
-  Witnesses,
-  Contract as ContractType,
-} from './managed/battleship_east/contract/index.cjs';
+import type { Coord, Ships, ShipState, Ledger, Witnesses } from './managed/battleship_east/contract/index.js';
 import { WitnessContext } from '@midnight-ntwrk/compact-runtime';
 
-export { SHOT_RESULT };
-export { GAME_STATE };
-export type { Ships, Coord, Witnesses, Ledger, ShipState };
-export { ledger };
-export { ContractType };
-export type Contract<T, W extends Witnesses<T> = Witnesses<T>> = ContractType<T, W>;
-export const Contract = ContractType;
+export * from './managed/battleship_east/contract/index.js';
 
 function ship2Cells(cell: Coord, vertical: boolean): [Coord, Coord] {
   if (vertical) {

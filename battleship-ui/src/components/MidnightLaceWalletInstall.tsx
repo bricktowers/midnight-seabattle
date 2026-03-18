@@ -38,10 +38,10 @@ export const MidnightLaceWalletInstall: React.FC = () => {
         Midnight Lace Wallet:
         <br />
         Node Address: <br />
-        <b>https://rpc.testnet-02.midnight.solutions</b>
+        <b>https://rpc.preprod.midnight.solutions</b>
         <br />
         Indexer Address: <br />
-        <b>https://indexer-rs.testnet-02.midnight.solutions</b>
+        <b>https://indexer-rs.preprod.midnight.solutions</b>
       </Typography>
     </div>
   );

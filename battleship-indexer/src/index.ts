@@ -60,10 +60,10 @@ const main = (): void => {
     console.log('Starting Battleship Indexer');
 
     const config: Config = {
-      indexerUri: process.env.INDEXER_URI ?? 'https://indexer-rs.testnet-02.midnight.network/api/v1/graphql',
-      indexerWsUri: process.env.INDEXER_WS_URI ?? 'wss://indexer-rs.testnet-02.midnight.network/api/v1/graphql/ws',
+      indexerUri: process.env.INDEXER_URI ?? 'https://indexer.preprod.midnight.network/api/v3/graphql',
+      indexerWsUri: process.env.INDEXER_WS_URI ?? 'wss://indexer.preprod.midnight.network/api/v3/graphql/ws',
       projectId: process.env.PROJECT_ID ?? 'btow-dev-midnight',
-      networkId: process.env.NETWORK_ID ?? 'TestNet',
+      networkId: process.env.NETWORK_ID ?? 'preprod',
       rewardTokenAddress:
         process.env.REWARD_TOKEN_ADDRESS ?? '0200e2f48cf74e64894297105ad968385d637cf4b6228042ea89a89452a497da3cf0',
     };

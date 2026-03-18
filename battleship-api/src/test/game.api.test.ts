@@ -1,17 +1,16 @@
 import { GAME_STATE, getOccupiedCells, type Ships } from '@bricktowers/battleship-west-contract';
-import { type Resource } from '@midnight-ntwrk/wallet';
-import { type Wallet } from '@midnight-ntwrk/wallet-api';
+import { type MidnightWalletProvider } from '@midnight-ntwrk/testkit-js';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import path from 'path';
 import { BattleshipAPI, type BattleshipProviders, BOARD_STATE, emptyState } from '..';
-import { type BrickTowersCoinContract, type BrickTowersCoinProviders, TestEnvironment, TestProviders } from './commons';
-import { Contract } from '@bricktowers/token-contract';
+import { type BrickTowersCoinProviders, TestEnvironment, TestProviders } from './commons';
+import { compiledTokenContract } from '@bricktowers/token-contract';
 import { currentDir } from './config';
 import { createLogger } from './logger-utils';
 import { prettyPrintBoard } from '../commons';
 import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
 import { randomBytes } from '../utils';
-import { type ContractAddress } from '@midnight-ntwrk/ledger';
+import { type ContractAddress } from '@midnight-ntwrk/compact-runtime';
 
 const logDir = path.resolve(currentDir, '..', 'logs', 'tests', `${new Date().toISOString()}.log`);
 const logger = await createLogger(logDir);
@@ -162,8 +161,8 @@ describe('Board', () => {
 
 describe('Game', () => {
   let testEnvironment: TestEnvironment;
-  let wallet: Wallet & Resource;
-  let wallet2: Wallet & Resource;
+  let wallet: MidnightWalletProvider;
+  let wallet2: MidnightWalletProvider;
   let providers1: BattleshipProviders;
   let providers2: BattleshipProviders;
   let tokenAddress: ContractAddress;
@@ -192,20 +191,18 @@ describe('Game', () => {
     v51: false,
   };
   async function mint(tokenProvider: BrickTowersCoinProviders) {
-    const brickTowersCoinContract: BrickTowersCoinContract = new Contract({});
-    await tokenProvider.privateStateProvider.set('coin2', {});
     const contractDeployed = await findDeployedContract(tokenProvider, {
+      compiledContract: compiledTokenContract,
       privateStateId: 'coin2',
       contractAddress: tokenAddress,
-      contract: brickTowersCoinContract,
+      initialPrivateState: {},
     });
     await contractDeployed.callTx.mint();
   }
   async function deploy(tokenProvider: BrickTowersCoinProviders) {
-    const brickTowersCoinContract: BrickTowersCoinContract = new Contract({});
     const deployedContract = await deployContract(tokenProvider, {
+      compiledContract: compiledTokenContract,
       privateStateId: 'coin',
-      contract: brickTowersCoinContract,
       initialPrivateState: {},
       args: [randomBytes(32)],
     });

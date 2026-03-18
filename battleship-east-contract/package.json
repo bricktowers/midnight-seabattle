@@ -14,7 +14,7 @@
     }
   },
   "scripts": {
-    "compact_east": "run-compactc src/battleship_east.compact ./src/managed/battleship_east",
+    "compact_east": "compact compile src/battleship_east.compact ./src/managed/battleship_east",
     "compact": "yarn compact_east",
     "test": "vitest run",
     "prepack": "yarn build",

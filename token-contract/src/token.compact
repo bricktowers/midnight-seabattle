@@ -2,7 +2,7 @@ pragma language_version >= 0.13.0;
 
 import CompactStandardLibrary;
 
-export { CoinInfo };
+export { ShieldedCoinInfo };
 
 export ledger counter: Counter;
 export ledger nonce: Bytes<32>;
@@ -17,6 +17,6 @@ export circuit mint(): [] {
   const newNonce = evolveNonce(counter, nonce);
   const amount = 1000;
   tvl = tvl + amount as Uint<64>;
-  mintToken(pad(32, "brick_towers_coin"), amount, newNonce, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()));
+  mintShieldedToken(pad(32, "brick_towers_coin"), amount, newNonce, left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()));
   nonce = newNonce;
 }

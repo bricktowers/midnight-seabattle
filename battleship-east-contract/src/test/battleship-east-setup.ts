@@ -1,20 +1,20 @@
 import {
-  CircuitContext,
-  CircuitResults,
-  constructorContext,
-  QueryContext,
+  type CircuitContext,
+  type CircuitResults,
+  createConstructorContext,
+  createCircuitContext,
   sampleContractAddress,
 } from '@midnight-ntwrk/compact-runtime';
 import * as crypto from 'node:crypto';
 import {
-  BattleshipEastPrivateState,
+  type BattleshipEastPrivateState,
   eastWitnesses,
-  Ledger,
+  type Ledger,
   ledger,
-  Witnesses,
-  Coord,
-  Ships,
-  ShipState,
+  type Witnesses,
+  type Coord,
+  type Ships,
+  type ShipState,
   Contract,
 } from '../index.js';
 
@@ -31,15 +31,15 @@ export class BattleshipSimulator {
   constructor(privateState: BattleshipEastPrivateState) {
     this.contract = new Contract(eastWitnesses);
     const { currentPrivateState, currentContractState, currentZswapLocalState } = this.contract.initialState(
-      constructorContext(privateState, '0'.repeat(64)),
+      createConstructorContext(privateState, '0'.repeat(64)),
     );
     this.userPrivateStates = { ['p1']: currentPrivateState };
-    this.turnContext = {
-      currentPrivateState,
+    this.turnContext = createCircuitContext(
+      sampleContractAddress(),
       currentZswapLocalState,
-      originalState: currentContractState,
-      transactionContext: new QueryContext(currentContractState.data, sampleContractAddress()),
-    };
+      currentContractState,
+      currentPrivateState,
+    );
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     this.updateUserPrivateState = (newPrivateState: BattleshipEastPrivateState) => {};
   }
@@ -74,7 +74,7 @@ export class BattleshipSimulator {
   }
 
   getLedgerState(): Ledger {
-    return ledger(this.turnContext.transactionContext.state);
+    return ledger(this.turnContext.currentQueryContext.state);
   }
 
   getPrivateState(): BattleshipEastPrivateState {

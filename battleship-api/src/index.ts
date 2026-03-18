@@ -1,7 +1,6 @@
-import { type ContractAddress, tokenType } from '@midnight-ntwrk/compact-runtime';
+import { type ContractAddress, rawTokenType, encodeRawTokenType, encodeContractAddress } from '@midnight-ntwrk/compact-runtime';
 import { type Logger } from 'pino';
 import {
-  type BattleshipContract,
   type BattleshipDerivedState,
   type BattleshipProviders,
   type DeployedBattleshipContract,
@@ -11,14 +10,13 @@ import {
 } from './common-types.js';
 import {
   type BattleshipPrivateState,
-  Contract,
+  compiledBattleshipWestContract,
   type Coord,
   createBattleshipPrivateState,
   ledger,
   pureCircuits,
   type Ships,
-  westWitnesses,
-  type CoinInfo,
+  type ShieldedCoinInfo,
 } from '@bricktowers/battleship-west-contract';
 import * as utils from './utils/index.js';
 import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js-contracts';
@@ -26,10 +24,6 @@ import { combineLatest, concat, defer, from, map, type Observable, of, retry, sc
 import { toHex } from '@midnight-ntwrk/midnight-js-utils';
 import { updateBoard, updatePartialShips } from './commons.js';
 import type { PrivateStateProvider } from '@midnight-ntwrk/midnight-js-types/dist/private-state-provider';
-import { encodeTokenType } from '@midnight-ntwrk/onchain-runtime';
-import { encodeContractAddress } from '@midnight-ntwrk/ledger';
-
-const battleshipContract: BattleshipContract = new Contract(westWitnesses);
 
 export interface DeployedBattleshipAPI {
   readonly deployedContractAddress: ContractAddress;
@@ -194,17 +188,18 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
     this.privateStates$.next(newState);
   }
 
-  coin(): CoinInfo {
+  coin(): ShieldedCoinInfo {
     return {
       nonce: utils.randomBytes(32),
-      color: encodeTokenType(tokenType(utils.pad('brick_towers_coin', 32), this.tokenContractAddress)),
+      color: encodeRawTokenType(rawTokenType(utils.pad('brick_towers_coin', 32), this.tokenContractAddress)),
       value: 100n,
     };
   }
 
   async join_p1(): Promise<void> {
     this.logger.info('join_p1');
-    const txData = await this.deployedContract.callTx.join_p1(this.coin());
+    const txData = await this.deployedContract.callTx
+      .join_p1(this.coin());
     this.logger.trace({
       player1Joined: {
         txHash: txData.public.txHash,
@@ -236,8 +231,8 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
       },
     });
     const deployedGameContract = await deployContract(providers, {
+      compiledContract: compiledBattleshipWestContract,
       privateStateId: gameId,
-      contract: battleshipContract,
       initialPrivateState: await BattleshipAPI.getPrivateState(gameId, providers.privateStateProvider),
       args: [
         {
@@ -271,8 +266,8 @@ export class BattleshipAPI implements DeployedBattleshipAPI {
     });
 
     const deployedGameContract = await findDeployedContract(providers, {
+      compiledContract: compiledBattleshipWestContract,
       contractAddress,
-      contract: battleshipContract,
       privateStateId: gameId,
       initialPrivateState: await BattleshipAPI.getPrivateState(gameId, providers.privateStateProvider),
     });

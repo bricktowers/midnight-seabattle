@@ -1,5 +1,4 @@
 import React from 'react';
-import type { Address } from '@midnight-ntwrk/wallet-api/dist/types';
 import {
   Alert,
   Box,
@@ -45,7 +44,7 @@ export const WalletWidget = (
   setOpenFloating: (isOpen: boolean) => void,
   walletError?: MidnightWalletErrorType,
   snackBarText?: string,
-  address?: Address,
+  address?: string,
 ): React.ReactNode => {
   const box = (content: React.ReactNode): React.ReactNode => {
     return (

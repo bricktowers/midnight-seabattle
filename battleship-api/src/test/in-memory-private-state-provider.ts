@@ -1,4 +1,14 @@
-import { type PrivateStateProvider } from '@midnight-ntwrk/midnight-js-types';
+import {
+  type PrivateStateProvider,
+  type ExportPrivateStatesOptions,
+  type ImportPrivateStatesOptions,
+  type ImportPrivateStatesResult,
+  type PrivateStateExport,
+  type ExportSigningKeysOptions,
+  type ImportSigningKeysOptions,
+  type ImportSigningKeysResult,
+  type SigningKeyExport,
+} from '@midnight-ntwrk/midnight-js-types';
 import type { ContractAddress, SigningKey } from '@midnight-ntwrk/compact-runtime';
 
 /**
@@ -41,6 +51,30 @@ export function inMemoryPrivateStateProvider<PSI extends string = string, PS = a
 
     async clearSigningKeys(): Promise<void> {
       btSigningKeys.clear();
+    },
+
+    setContractAddress(_address: ContractAddress): void {},
+
+    async exportPrivateStates(_options?: ExportPrivateStatesOptions): Promise<PrivateStateExport> {
+      return Promise.reject(new Error('exportPrivateStates not supported'));
+    },
+
+    async importPrivateStates(
+      _exportData: PrivateStateExport,
+      _options?: ImportPrivateStatesOptions,
+    ): Promise<ImportPrivateStatesResult> {
+      return Promise.reject(new Error('importPrivateStates not supported'));
+    },
+
+    async exportSigningKeys(_options?: ExportSigningKeysOptions): Promise<SigningKeyExport> {
+      return Promise.reject(new Error('exportSigningKeys not supported'));
+    },
+
+    async importSigningKeys(
+      _exportData: SigningKeyExport,
+      _options?: ImportSigningKeysOptions,
+    ): Promise<ImportSigningKeysResult> {
+      return Promise.reject(new Error('importSigningKeys not supported'));
     },
   };
 }

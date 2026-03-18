@@ -10,7 +10,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['**/*.test.ts'],
-    exclude: ['node_modules', "**/prepare-local-standalone-env.test.ts"],
+    exclude: ['node_modules'],
     root: '.',
     coverage: {
       provider: 'v8',
