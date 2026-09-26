@@ -12,7 +12,16 @@ export const connectToWallet = (
   return firstValueFrom(
     fnPipe(
       interval(100),
-      map(() => window.midnight?.mnLace),
+      map(() => {
+        const midnight = window.midnight;
+        if (!midnight) return undefined;
+        // Lace injects under a UUID key; hardcoding mnLace often resolves to undefined.
+        const providers = Object.values(midnight).filter(
+          (api): api is DAppConnectorAPI =>
+            !!api && typeof (api as DAppConnectorAPI).enable === 'function',
+        );
+        return providers[0] ?? midnight.mnLace;
+      }),
       tap((connectorAPI) => {
         logger.info(connectorAPI, 'Check for wallet connector API');
       }),
@@ -44,7 +53,7 @@ export const connectToWallet = (
           throwError(() => {
             logger.error('Could not find wallet connector API');
 
-            return new Error('Could not find Midnight Lace wallet. Extension installed?');
+            return new Error('Could not find a Midnight wallet on window.midnight. Extension installed?');
           }),
       }),
       concatMap(async (connectorAPI) => {
