@@ -4,6 +4,7 @@ import {
   ShipState,
   ledger,
   Ledger,
+  SHIP,
   SHOT_RESULT,
   GAME_STATE,
   Witnesses,
@@ -11,6 +12,7 @@ import {
 } from './managed/battleship_east/contract/index.cjs';
 import { WitnessContext } from '@midnight-ntwrk/compact-runtime';
 
+export { SHIP };
 export { SHOT_RESULT };
 export { GAME_STATE };
 export type { Ships, Coord, Witnesses, Ledger, ShipState };

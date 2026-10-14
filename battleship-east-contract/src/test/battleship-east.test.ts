@@ -1,6 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { BattleshipSimulator, randomSk } from './battleship-east-setup';
-import { Ships, GAME_STATE, getEastOccupiedCells, SHOT_RESULT, validateShips } from '../index';
+import { Ships, GAME_STATE, getEastOccupiedCells, SHIP, SHOT_RESULT, validateShips } from '../index';
 import * as fc from 'fast-check';
 
 const player1Ships: Ships = {
@@ -114,6 +114,42 @@ describe('Valid Gameplay', () => {
         expect(p1state.last_shot_result.value.result).toBe(SHOT_RESULT.miss);
       }
     }
+  });
+});
+
+describe('Shots at 1-cell ships', () => {
+  test('A shot that lands on a 1-cell ship reports ship_sunk and counts the hit', () => {
+    const simulator = createGame();
+
+    simulator.as('p1').join_p1();
+    simulator.as('p2').join_p2();
+
+    // Player 1 shoots at player 2's s11 ship, which sits on a single cell.
+    simulator.as('p1').turn_player1({ x: player2Ships.s11.x, y: player2Ships.s11.y });
+    // Player 2's turn first resolves that shot against their own ships.
+    const p2state = simulator.as('p2').turn_player2({ x: 5n, y: 5n });
+
+    expect(p2state.last_shot_result.value.result).toBe(SHOT_RESULT.ship_sunk);
+    expect(p2state.last_shot_result.value.ship_def.ship).toBe(SHIP.s11);
+    expect(p2state.p2_hit_counter).toBe(1n);
+  });
+
+  test('Sinking every ship wins the game', () => {
+    const simulator = createGame();
+
+    simulator.as('p1').join_p1();
+    simulator.as('p2').join_p2();
+
+    // Player 1 shoots at every cell of player 2's fleet, one shot per round;
+    // player 2 always shoots at open water on player 1's board.
+    let p2state = simulator.getLedgerState();
+    for (const cell of getEastOccupiedCells(player2Ships)) {
+      simulator.as('p1').turn_player1(cell);
+      p2state = simulator.as('p2').turn_player2({ x: 1n, y: 2n });
+    }
+
+    expect(p2state.p2_hit_counter).toBe(20n);
+    expect(p2state.game_state).toBe(GAME_STATE.p1_wins);
   });
 });
 
