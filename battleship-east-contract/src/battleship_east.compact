@@ -313,7 +313,19 @@ pure circuit calculate_shot_result(
   ships: Ships,
   player: Bytes<32>
 ): ShotResult {
-  if (contains<2, Coord>(ship_state.s21, shot_attempt)) {
+  if (ship_state.s11 == shot_attempt) {
+    const ship_def = ShipDef { ship: SHIP.s11, ship_cell: ships.s11, ship_v: false };
+    return get_shot_result<1>(shot_attempt, [updated_ship_state.s11], player, ship_def);
+  } else if (ship_state.s12 == shot_attempt) {
+    const ship_def = ShipDef { ship: SHIP.s12, ship_cell: ships.s12, ship_v: false };
+    return get_shot_result<1>(shot_attempt, [updated_ship_state.s12], player, ship_def);
+  } else if (ship_state.s13 == shot_attempt) {
+    const ship_def = ShipDef { ship: SHIP.s13, ship_cell: ships.s13, ship_v: false };
+    return get_shot_result<1>(shot_attempt, [updated_ship_state.s13], player, ship_def);
+  } else if (ship_state.s14 == shot_attempt) {
+    const ship_def = ShipDef { ship: SHIP.s14, ship_cell: ships.s14, ship_v: false };
+    return get_shot_result<1>(shot_attempt, [updated_ship_state.s14], player, ship_def);
+  } else if (contains<2, Coord>(ship_state.s21, shot_attempt)) {
     const ship_def = ShipDef { ship: SHIP.s21, ship_cell: ships.s21, ship_v: ships.v21 };
     return get_shot_result<2>(shot_attempt, updated_ship_state.s21, player, ship_def);
   } else if (contains<2, Coord>(ship_state.s22, shot_attempt)) {
